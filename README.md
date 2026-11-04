@@ -1,5 +1,5 @@
 # Red Dead Redemption (PC) - Archipelago Randomizer 
-<img width="1280" height="536" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
+<img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
 Claude AI Assisted in creating this project about 70%. The rest was cleanup by me and testing by me. AI is close to being very impressive but still overlooks very simple things and issues. 
