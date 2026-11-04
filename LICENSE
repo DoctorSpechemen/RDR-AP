@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 DrSpaceman
+Copyright (c) 2026 jhastert1
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This license covers the code in this repository only. RedHook, the RedHook SDK and its headers belong to K3rhos and
+are not included. Red Dead Redemption is a trademark of Rockstar Games / Take-Two Interactive.

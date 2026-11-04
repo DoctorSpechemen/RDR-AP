@@ -1,0 +1,155 @@
+# script|kind|location|cluster or part|final|confidence   (kind: mission, stranger)  Edit freely; reloaded at game start.
+anthro01|mission|For Purely Scientific Purposes|Dutch's Hideout|1|high
+anthro03|mission|The Prodigal Son Returns (to Yale)|Dutch's Hideout|1|medium
+fbi01|mission|At Home with Dutch|Dutch's Hideout|1|low
+fbi02|mission|Great Men Are Not Always Wise|Ross's Offer|1|low
+fbi04|mission|And You Will Know the Truth|The Truth|1|low
+fbi05|mission|Bear One Another's Burdens|Ross's Offer|1|low
+fort01|mission|The Assault on Fort Mercer|Assault on Fort Mercer|1|high
+fort02|mission|We Shall Be Together in Paradise|Crossing the Border|1|medium
+grave01|mission|Spare the Rod, Spoil the Bandit|Armadillo Law|1|medium
+grave02|mission|Exhuming and Other Fine Hobbies|Seth's Graveyard|1|medium
+grave03|mission|Let the Dead Bury Their Dead|Seth's Graveyard|1|high
+gun01|mission|The Gunslinger's Tragedy|Landon Ricketts|1|high
+gun02|mission|The Mexican Wagon Train|Landon Ricketts|1|medium
+gun03|mission|Lucky in Love|Landon Ricketts|1|low
+gun05|mission|Landon Ricketts Rides Again|Landon Ricketts|1|medium
+home01|mission|The Outlaw's Return|Homecoming|1|medium
+home02_ranch01|mission|Pestilence|Homecoming|1|low
+home02_ranch03|mission|Old Friends, New Problems|Homecoming|1|low
+home02_son01|mission|John Marston and Son|Father and Son|1|high
+home02_son02|mission|Wolves, Dogs and Sons|Father and Son|1|high
+home02_son03|mission|Spare the Love, Spoil the Child|Father and Son|1|medium
+home02_wife02|mission|By Sweat and Toil|Marston Ranch|1|medium
+home02_wife03|mission|A Continual Feast|Marston Ranch|1|low
+home03|mission|The Last Enemy That Shall Be Destroyed|The Last Enemy|1|high
+intro01|mission|Exodus in America|Armadillo Arrival|1|high
+marshal01|mission|Political Realities in Armadillo|Armadillo Law|1|confirmed
+marshal02|mission|Justice in Pike's Basin|Armadillo Law|1|high
+marshal03|mission|Hanging Bonnie MacFarlane|The Burning|1|high
+merchant01|mission|Old Swindler Blues|West Dickens' Schemes|1|high
+merchant02|mission|You Shall Not Give False Testimony, Except for Profit|The Burning|1|medium
+merchant03|mission|Liars, Cheats and Other Proud Americans|Irish and Friends|1|low
+merchant04|mission|The Sport of Kings, and Liars|Assault on Fort Mercer|1|high
+merchant05|mission|Can a Swindler Change His Spots?|Assault on Fort Mercer|1|low
+mexarmy01|mission|Civilization, At Any Price|De Santa's Army|1|high
+mexarmy02|mission|The Demon Drink|De Santa's Army|1|low
+mexarmy03|mission|Empty Promises|De Santa's Army|1|low
+mexarmy04|mission|Mexican Caesar|De Santa's Army|1|low
+mexarmy05|mission|Cowards Die Many Times|De Santa's Downfall|1|low
+mexgirl01|mission|My Sister's Keeper|Fortuna's Rebels|1|medium
+mexgirl03|mission|Must a Savior Die?|Fortuna's Rebels|1|medium
+native03|mission|And the Truth Will Set You Free|The Truth|1|medium
+outlaw01|mission|A Frenchman, a Welshman and an Irishman|Irish and Friends|1|high
+outlaw02|mission|Man is Born Unto Trouble|Irish and Friends|1|high
+outlaw03|mission|On Shaky's Ground|Irish and Friends|1|high
+ranch01|mission|New Friends, Old Problems|Armadillo Arrival|1|medium
+ranch02|mission|This is Armadillo, USA|Armadillo Arrival|1|confirmed
+ranch03|mission|Obstacles in Our Path|Armadillo Arrival|1|medium
+ranch04|mission|The Burning|The Burning|1|high
+ranch06|mission|Wild Horses, Tamed Passions|MacFarlane Ranch|1|high
+ranch07|mission|Women and Cattle|MacFarlane Ranch|1|high
+ranch08|mission|A Tempest Looms|MacFarlane Ranch|1|medium
+rebel02|mission|Father Abraham|De Santa's Downfall|1|low
+rebel03|mission|The Great Mexican Train Robbery|Reyes' Rebellion|1|high
+rebel04|mission|Captain De Santa's Downfall|De Santa's Downfall|1|low
+rebel05|mission|An Appointed Time|Reyes' Rebellion|1|high
+rebel06|mission|The Gates of El Presidio|Reyes' Rebellion|1|high
+rcm_cannibalfamily1|stranger|American Appetites|1|0|medium
+rcm_cannibalfamily2|stranger|American Appetites|2|0|medium
+rcm_cannibalfamily3|stranger|American Appetites|3|0|medium
+rcm_cannibalfamily4|stranger|American Appetites|4|0|medium
+rcm_cannibalfamily5|stranger|American Appetites|5|0|medium
+rcm_cannibalfamily6|stranger|American Appetites|6|1|medium
+rcm_california1|stranger|California|1|0|high
+rcm_california2|stranger|California|2|0|high
+rcm_california3|stranger|California|3|0|high
+rcm_california4|stranger|California|4|0|high
+rcm_california5|stranger|California|5|1|high
+rcm_corpse1|stranger|Flowers for a Lady|1|0|medium
+rcm_corpse2|stranger|Flowers for a Lady|2|1|medium
+rcm_funnyman1|stranger|Funny Man|1|0|high
+rcm_funnyman2|stranger|Funny Man|2|0|high
+rcm_funnyman3|stranger|Funny Man|3|0|high
+rcm_funnyman4|stranger|Funny Man|4|1|high
+rcm_iknowyou1|stranger|I Know You|1|0|high
+rcm_iknowyou2|stranger|I Know You|2|0|high
+rcm_iknowyou3|stranger|I Know You|3|0|high
+rcm_iknowyou4|stranger|I Know You|4|0|high
+rcm_iknowyou8|stranger|I Know You|8|1|high
+rcm_jenny1|stranger|Jenny's Faith|1|0|high
+rcm_jenny2|stranger|Jenny's Faith|2|1|high
+rcm_abandoned1|stranger|Let No Man Put Asunder|1|0|low
+rcm_abandoned3|stranger|Let No Man Put Asunder|3|0|low
+rcm_abandoned4|stranger|Let No Man Put Asunder|4|0|low
+rcm_abandoned6|stranger|Let No Man Put Asunder|6|1|low
+rcm_lights1|stranger|Lights, Camera, Action|1|0|high
+rcm_lights2|stranger|Lights, Camera, Action|2|0|high
+rcm_lights3|stranger|Lights, Camera, Action|3|0|high
+rcm_lights4|stranger|Lights, Camera, Action|4|0|high
+rcm_lights5|stranger|Lights, Camera, Action|5|1|high
+rcm_water1|stranger|Water and Honesty|1|0|high
+rcm_water2|stranger|Water and Honesty|2|0|high
+rcm_water3|stranger|Water and Honesty|3|0|high
+rcm_water4|stranger|Water and Honesty|4|1|high
+rcm_missing1|stranger|Who Are You to Judge?|1|0|low
+rcm_missing2|stranger|Who Are You to Judge?|2|0|low
+rcm_missing3|stranger|Who Are You to Judge?|3|1|low
+rcm_aztecgold1|stranger|Aztec Gold|1|0|high
+rcm_aztecgold2|stranger|Aztec Gold|2|0|high
+rcm_aztecgold3|stranger|Aztec Gold|3|0|high
+rcm_aztecgold4|stranger|Aztec Gold|4|0|high
+rcm_aztecgold7|stranger|Aztec Gold|7|0|high
+rcm_aztecgold8|stranger|Aztec Gold|8|1|high
+rcm_icarus1|stranger|Deadalus and Son|1|0|high
+rcm_icarus2|stranger|Deadalus and Son|2|0|high
+rcm_icarus3|stranger|Deadalus and Son|3|1|high
+rcm_killerpimp1|stranger|Eva in Peril|1|0|medium
+rcm_killerpimp1a|stranger|Eva in Peril|1a|0|medium
+rcm_killerpimp2|stranger|Eva in Peril|2|0|medium
+rcm_killerpimp3|stranger|Eva in Peril|3|1|medium
+rcm_opiate1|stranger|Love is the Opiate|1|0|high
+rcm_opiate2|stranger|Love is the Opiate|2|0|high
+rcm_opiate3|stranger|Love is the Opiate|3|1|high
+rcm_dealer1|stranger|Poppycock|1|0|low
+rcm_dealer2|stranger|Poppycock|2|0|low
+rcm_dealer3|stranger|Poppycock|3|0|low
+rcm_dealer4|stranger|Poppycock|4|0|low
+rcm_dealer5|stranger|Poppycock|5|1|low
+rcm_politician1|stranger|American Lobbyist|1|0|high
+rcm_politician2|stranger|American Lobbyist|2|0|high
+rcm_politician3|stranger|American Lobbyist|3|1|high
+rcm_prohibitionist1|stranger|The Prohibitionist|1|0|high
+rcm_prohibitionist2|stranger|The Prohibitionist|2|0|high
+rcm_prohibitionist3|stranger|The Prohibitionist|3|0|high
+rcm_prohibitionist4|stranger|The Prohibitionist|4|1|high
+rcm_wronged1|stranger|The Wronged Woman|1|0|high
+rcm_wronged2|stranger|The Wronged Woman|2|0|high
+rcm_wronged3|stranger|The Wronged Woman|3|0|high
+rcm_wronged4|stranger|The Wronged Woman|4|0|high
+rcm_wronged6|stranger|The Wronged Woman|6|1|high
+rcm_remember1|stranger|Remember My Family|1|0|high
+rcm_remember2|stranger|Remember My Family|2|0|high
+rcm_remember3|stranger|Remember My Family|3|0|high
+rcm_remember4|stranger|Remember My Family|4|1|high
+@cluster|Armadillo Arrival|Exodus in America;New Friends, Old Problems;Obstacles in Our Path;This is Armadillo, USA|0|
+@cluster|MacFarlane Ranch|Women and Cattle;Wild Horses, Tamed Passions;A Tempest Looms|0|
+@cluster|Armadillo Law|Political Realities in Armadillo;Justice in Pike's Basin;Spare the Rod, Spoil the Bandit|0|
+@cluster|West Dickens' Schemes|Old Swindler Blues|0|
+@cluster|The Burning|The Burning;Hanging Bonnie MacFarlane;You Shall Not Give False Testimony, Except for Profit|0|
+@cluster|Seth's Graveyard|Exhuming and Other Fine Hobbies;A Gentle Drive with Friends;Let the Dead Bury Their Dead|0|
+@cluster|Irish and Friends|Liars, Cheats and Other Proud Americans;A Frenchman, a Welshman and an Irishman;Man is Born Unto Trouble;On Shaky's Ground|0|
+@cluster|Assault on Fort Mercer|Can a Swindler Change His Spots?;The Sport of Kings, and Liars;The Assault on Fort Mercer|0|
+@cluster|Crossing the Border|We Shall Be Together in Paradise|0|
+@cluster|De Santa's Army|Civilization, At Any Price;The Demon Drink;Empty Promises;Mexican Caesar|0|
+@cluster|Landon Ricketts|The Gunslinger's Tragedy;Landon Ricketts Rides Again;Lucky in Love;The Mexican Wagon Train|0|
+@cluster|Fortuna's Rebels|My Sister's Keeper;Must a Savior Die?|0|
+@cluster|De Santa's Downfall|Cowards Die Many Times;Father Abraham;Captain De Santa's Downfall|0|
+@cluster|Reyes' Rebellion|The Great Mexican Train Robbery;The Gates of El Presidio;An Appointed Time|0|
+@cluster|Ross's Offer|Bear One Another's Burdens;Great Men Are Not Always Wise|0|
+@cluster|Dutch's Hideout|At Home with Dutch;For Purely Scientific Purposes;The Prodigal Son Returns (to Yale)|0|
+@cluster|The Truth|And You Will Know the Truth;And the Truth Will Set You Free|0|
+@cluster|Homecoming|The Outlaw's Return;Pestilence;Old Friends, New Problems|0|
+@cluster|Marston Ranch|By Sweat and Toil;A Continual Feast|0|
+@cluster|Father and Son|John Marston and Son;Wolves, Dogs and Sons;Spare the Love, Spoil the Child|0|
+@cluster|The Last Enemy|The Last Enemy That Shall Be Destroyed|0|

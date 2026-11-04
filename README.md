@@ -3,13 +3,26 @@
 APWorld + RedHook plugin (v6.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it.
 
 ## What you need
-- Red Dead Redemption (PC) with RedHook, and `RedHookExample.red` (this plugin) in the game folder.
-- `rdr1_ap_hashmap.txt` and `rdr1_ap_scriptmap.txt` in the game folder (mission data).
-- `rdr1.apworld` in Archipelago's `custom_worlds` folder.
+- Red Dead Redemption (PC, Steam) and [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) 0.5.0 or newer.
+- [RedHook](https://www.nexusmods.com/reddeadredemption/mods/192) installed in the game folder.
+- The [Microsoft Visual C++ Redistributable (x64)](https://aka.ms/vs/17/release/vc_redist.x64.exe). Most PCs already have it.
+- From the release download: `RDR-AP.red`, `rdr1_ap_hashmap.txt`, `rdr1_ap_scriptmap.txt` (copy all three into the game
+  folder, next to `RDR.exe`) and `rdr1.apworld` (Archipelago Launcher > **Install APWorld**).
+
+## Turn off cloud saves (do this once)
+The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
+Turn them off so the cloud does not put your normal saves back over the Archipelago ones (or the other way around):
+1. Start the game and wait for the Rockstar Games Launcher overlay to finish loading.
+2. Press **Home** (on a controller: **Back/View + RB**) to open the overlay.
+3. Click the **gear icon** next to your username (top right), then **Settings > Game Settings**, and turn **Cloud Saves** off.
+4. If the game ever asks whether to turn cloud saves on, choose **Not Right Now**.
+
+The setting has been reported to switch itself back on for some players, so check it again if your saves ever look wrong.
 
 ## How to play
 1. Generate a multiworld with a YAML (`game: Red Dead Redemption`).
-2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. `/gamedir <path>` if the game is not in
+2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. After you enter your slot name the client
+   can hang for a second or two: that is normal, it is moving your save files into place. `/gamedir <path>` if the game is not in
    the default Steam folder.
 3. Start the game **after** connecting. The client swaps in this multiworld's own saves (start a NEW GAME the first time).
 4. Play. Close the game first, then the client: your normal saves come back automatically.
@@ -19,8 +32,9 @@ APWorld + RedHook plugin (v6.1) + client for Red Dead Redemption 1 on PC. The Un
 - **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first.
   Logic expects more Dead Eye later in the story (1 for Mexico up to 4 for the last mission); the game never stops you.
 - **Weapons are items** (Cattleman start, random start or vanilla pickups).
-- **Outfits are items** (17, cosmetic).
-- **Filler:** Max Ammo, Dead Eye Refill (rarer), $15 / $35 / $55 cash, Fame +20, Honor +20.
+- **Outfits are items** (14, cosmetic). The US Marshal, US Army and Bureau uniforms are not, because the game itself keeps
+  them locked until late in the story.
+- **Filler:** Max Ammo, Dead Eye Refill (rarer), $15 / $35 / $55 cash (given again if a checkpoint reload takes it back).
 - **Traps** (every trap shows a big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
   stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon (he whispers in your
   ear), Dead Eye drain.
@@ -61,8 +75,9 @@ APWorld + RedHook plugin (v6.1) + client for Red Dead Redemption 1 on PC. The Un
   yet (use `sendcheck`). Report the real title of any wrong check.
 - Stranger completion is read from the game's "stranger missions completed" stat (not confirmed yet in play).
 - Blackjack counts a win when you leave the table up money (per-hand detection is being worked on).
-- Outfit names other than Gentleman's Attire are guesses from the game's internal names.
-- Turn Rockstar cloud saves off for RDR1 while using the save swap.
+- Outfit names are matched from the game's internal names to the wiki list; Gentleman's Attire and Deadly Assassin have been
+  seen in game, the rest are best guesses. Report any outfit that arrives under the wrong name.
+- Keep Rockstar cloud saves off while using the save swap (see "Turn off cloud saves").
 
 ## Credits
 This randomizer is built on the work of these projects and their authors. Thank you!
