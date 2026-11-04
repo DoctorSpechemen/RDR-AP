@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.apworld
+*.red
+*.pdb
+*.zip
+# game-side files that must never be committed
+rdr1_ap_test.log
+rdr1_ap_seeds/
+rdr1_ap_saves/
+*.SAV
+.vs/
+Build/

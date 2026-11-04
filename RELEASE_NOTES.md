@@ -1,26 +1,21 @@
-# RDR-AP Beta 2 (pre-release)
+# RDR-AP Beta 2.1 (pre-release)
 
 Archipelago randomizer for Red Dead Redemption (PC). **Beta: expect bugs.** Your normal saves are swapped out and backed
 up automatically (`rdr1_ap_saves\_backups` in the game folder), but please keep your own backup too.
 
 ## Download
-`RDR-AP_Beta2.zip` contains `rdr1.apworld`, `RDR-AP.red`, `rdr1_ap_hashmap.txt`, `rdr1_ap_scriptmap.txt`, the README
-and a template YAML. Setup steps are in the README (needs RedHook and Archipelago 0.5.0+).
+`RDR-AP_Beta2.1.zip`: `rdr1.apworld`, `RDR-AP.red`, `rdr1_ap_hashmap.txt`, `rdr1_ap_scriptmap.txt`, the README, a template
+YAML and `RDR-AP_PopTracker.zip`. Setup steps are in the README (needs RedHook and Archipelago 0.5.0+).
 
-## What's in it
-- Every story and stranger mission is a check; missions play in the normal order.
-- Checks for gang kills, gang hideouts, hat tricks (up to 15), minigame wins and shop purchases (general stores,
-  gunsmiths, tailors).
-- Items: Progressive Dead Eye, weapons, 14 outfits, cash, Max Ammo, Dead Eye Refill, and 9 kinds of traps.
-- DeathLink, a separate save for every multiworld.
-
-## Changes since Beta 1
-- Story missions are no longer items: no "mission locked" any more, every finished mission sends its check.
-- Missions that end inside a load screen (Exodus in America) now send their check.
-- Hat tricks up to 15. Random encounters and fame/honor checks are off for now; Fame/Honor fillers removed.
-- Cash fillers ($15/$35/$55) come back if a checkpoint reload takes them away.
-- Outfit names corrected; the US Marshal, US Army and Bureau uniforms are not items (the game locks them until late).
-- Options are grouped in the YAML (Goal and Weapons, Checks, Items, Traps, Multiplayer).
+## New in Beta 2.1
+- Bounties: every wanted-poster bounty you turn in is a check (up to 20, counted in order).
+- Lightning Storm trap: a storm rolls in and three lightning strikes land close to you.
+- TrapLink support (option): traps are shared with other TrapLink games.
+- "Found X for Player" line when one of your checks sends an item to someone else (option).
+- Sounds with item pop-ups and trap warnings (option).
+- PopTracker pack with automatic tracking.
+- F9 tally: checks done / total per category (stays 30 s, F9 again closes it). The old F9-F11 test keys are gone.
+- Clean-up: old mission-cluster code removed, quieter log ("verbose 1" in rdr1_ap_in.txt for the full log).
 
 ## Reporting bugs
 Open an issue with what you did, what you expected, and attach `rdr1_ap_test.log` from the game folder.
