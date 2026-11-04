@@ -1,4 +1,6 @@
 # Red Dead Redemption (PC) - Archipelago Randomizer 
+<img width="912" height="380" alt="image" src="https://github.com/user-attachments/assets/b3cfe2e3-3186-4758-9474-e9fec7c574a5" />
+
 Claude AI Assisted in creating this project about 70%. The rest was cleanup by me and testing by me. AI is close to being very impressive but still overlooks very simple things and issues. 
 
 APWorld + RedHook plugin (v6.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
