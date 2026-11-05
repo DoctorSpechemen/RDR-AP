@@ -16,18 +16,52 @@ Start it from the Archipelago Launcher ("Red Dead Redemption Client") or run it 
 """
 import asyncio
 import os
+import time
 import typing
 
 import Utils
 from CommonClient import CommonContext, ClientCommandProcessor, get_base_parser, gui_enabled, logger, server_loop
 from NetUtils import ClientStatus
 
-from .Data import CLUSTERS, GAME_NAME
-from .Locations import location_name_to_id
+from .Data import ANIMAL_TRAPS, CLUSTERS, EXTRA_TRAPS, GAME_NAME, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP, RANDOM_ANIMAL_TRAP
+from .Locations import location_name_to_id, location_table
 
 DEFAULT_GAME_DIR = r"C:\Program Files (x86)\Steam\steamapps\common\Red Dead Redemption"
 STORY_MISSIONS = [m for _, missions, _, _ in CLUSTERS for m in missions]
 WEAPON_MODES = {0: "vanilla", 1: "cattleman_start", 2: "random_start"}
+OUR_TRAPS = ANIMAL_TRAPS + [RANDOM_ANIMAL_TRAP, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP] + EXTRA_TRAPS
+
+# TrapLink: traps from other games are matched to a Red Dead trap by words in their name; anything else becomes a random trap.
+TRAP_KEYWORDS = [
+    (("lightning", "thunder", "storm", "weather", "bomb", "explo", "rain"), "Lightning Storm Trap"),
+    (("slow", "freeze", "ice", "frozen", "stun", "paraly", "sticky", "gravity", "timer", "time"), "Slow Motion Trap"),
+    (("confus", "reverse", "invert", "drunk", "dizzy", "spin", "flip", "mirror", "control"), "Drunk Trap"),
+    (("ammo", "bullet", "disarm", "weapon", "gun", "magazine"), "Out of Bullets Trap"),
+    (("bee", "snake", "spider", "wolf", "bear", "animal", "creature"), "Random Animal Ambush Trap"),
+    (("stampede", "cow", "cattle", "herd", "buffalo"), "Stampede Trap"),
+    (("police", "law", "cop", "sheriff", "army", "guard", "posse"), "Lawmen Posse Trap"),
+    (("enemy", "ambush", "monster", "spawn", "attack", "goomba", "gang"), "Gang Attack Trap"),
+    (("text", "literature", "dialog", "phone", "tip", "chat", "message", "talk", "voice", "pong", "tiny"), "Herbert Moon Trap"),
+    (("energy", "mana", "magic", "dead eye", "deadeye", "focus", "drain", "sleep", "blind", "dark"), "Dead Eye Drain Trap"),
+]
+
+
+TALLY_LABELS = [("story", "Story"), ("stranger", "Strangers"), ("hideout", "Hideouts"), ("gang_kill", "Gang Kills"),
+                ("hat_trick", "Hat Tricks"), ("minigame", "Minigames"), ("bounty", "Bounties"), ("shop", "Shops")]
+LOCATION_CATEGORY = {data.code: data.category for data in location_table.values()}
+
+
+def match_trap(name: str) -> str:
+    if name in OUR_TRAPS:
+        return name
+    import re
+    low = name.lower()
+    tokens = re.findall(r"[a-z]+", low)
+    for words, trap in TRAP_KEYWORDS:
+        for w in words:
+            if (" " in w and w in low) or any(tok.startswith(w) for tok in tokens):
+                return trap
+    return ""
 
 
 class RDRCommandProcessor(ClientCommandProcessor):
@@ -82,6 +116,7 @@ class RDRContext(CommonContext):
         self.goal_sent = False
         self.last_items_text = ""
         self.wrote_once = False
+        self.trap_index: typing.Optional[int] = None   # TrapLink: items before this index were already there at connect
 
     def path(self, name: str) -> str:
         return os.path.join(self.game_dir, name)
@@ -103,11 +138,81 @@ class RDRContext(CommonContext):
             self.sent_lines = 0
             self.goal_sent = False
             self.last_items_text = ""
+            self.trap_index = None
             asyncio.create_task(self.update_death_link(bool(self.slot_data.get("death_link", False))))
+            asyncio.create_task(self.update_trap_link(bool(self.slot_data.get("trap_link", False))))
             logger.info(f"Connected. Game folder: {self.game_dir}")
             self.auto_saves_in()
             if not os.path.isdir(self.game_dir):
                 logger.warning("Game folder not found. Use /gamedir <path to the Red Dead Redemption folder>.")
+
+        elif cmd == "Bounced":
+            tags = args.get("tags", [])
+            data = args.get("data", {}) or {}
+            if "TrapLink" in tags and "TrapLink" in self.tags and data.get("source") != self.player_names.get(self.slot):
+                self.receive_trap_link(str(data.get("trap_name", "")), str(data.get("source", "Someone")))
+
+    # ------------------------------------------------------------------ TrapLink and "found" pop-ups
+
+    async def update_trap_link(self, on: bool) -> None:
+        old = self.tags.copy()
+        if on:
+            self.tags.add("TrapLink")
+        else:
+            self.tags -= {"TrapLink"}
+        if old != self.tags and self.server and not self.server.socket.closed:
+            await self.send_msgs([{"cmd": "ConnectUpdate", "tags": self.tags}])
+
+    def game_command(self, line: str) -> None:
+        line = line.replace("\n", " ").replace("\r", " ")
+        try:
+            with open(self.path("rdr1_ap_in.txt"), "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except OSError as e:
+            logger.error(f"Could not pass a message to the game: {e}")
+
+    def receive_trap_link(self, trap_name: str, source: str) -> None:
+        trap = match_trap(trap_name)
+        weights = self.slot_data.get("trap_weights", {})
+        if not trap or weights.get(trap, 1) == 0:
+            enabled = [t for t, w in weights.items() if w > 0] or [RANDOM_ANIMAL_TRAP]
+            import random
+            trap = random.choice(enabled)
+        logger.info(f"TrapLink: {trap_name} from {source} -> {trap}")
+        self.game_command(f"traplink {trap}|{source}")
+
+    async def send_trap_links(self) -> None:
+        """Every trap that arrives from the server (after connecting) is passed on to the other TrapLink players."""
+        count = len(self.items_received)
+        if self.trap_index is None:
+            self.trap_index = count
+            return
+        if "TrapLink" not in self.tags or count <= self.trap_index:
+            self.trap_index = count
+            return
+        for item in self.items_received[self.trap_index:count]:
+            name = self.item_names.lookup_in_game(item.item)
+            if name in OUR_TRAPS:
+                await self.send_msgs([{"cmd": "Bounce", "tags": ["TrapLink"],
+                                       "data": {"time": time.time(), "source": self.player_names.get(self.slot, ""),
+                                                "trap_name": name}}])
+                logger.info(f"TrapLink: sent {name}")
+        self.trap_index = count
+
+    def on_print_json(self, args: dict) -> None:
+        super().on_print_json(args)
+        if args.get("type") != "ItemSend" or not self.slot_data.get("found_item_popups", True) or self.slot is None:
+            return
+        item = args.get("item")
+        receiving = args.get("receiving")
+        if item is None or receiving is None or getattr(item, "player", None) != self.slot or receiving == self.slot:
+            return
+        try:
+            name = self.item_names.lookup_in_slot(item.item, receiving)
+        except Exception:
+            name = "an item"
+        who = self.player_names.get(receiving, "someone")
+        self.game_command(f"found Found {name} for {who}")
 
     # ------------------------------------------------------------------ automatic save swap
 
@@ -167,6 +272,11 @@ class RDRContext(CommonContext):
         lines = [f"seed {self.room_seed}"]
         mode = WEAPON_MODES.get(self.slot_data.get("weapon_mode", 1), "cattleman_start")
         lines.append(f"option weapon_mode {mode}")
+        lines.append(f"option sounds {'on' if self.slot_data.get('popup_sounds', True) else 'off'}")
+        lines.append(f"option found_popups {'on' if self.slot_data.get('found_item_popups', True) else 'off'}")
+        lines.append(f"option gang_kill_checks {self.slot_data.get('gang_kill_checks', 10)}")
+        lines.append(f"option hat_tricks {self.slot_data.get('hat_tricks', 15)}")
+        lines += self.tally_lines()
         for index, item in enumerate(self.items_received, start=1):
             name = self.item_names.lookup_in_game(item.item)
             sender = self.player_names.get(item.player, "") if item.player != self.slot else ""
@@ -179,6 +289,33 @@ class RDRContext(CommonContext):
             f.write(text)
         os.replace(tmp, self.path("rdr1_ap_items.txt"))  # atomic: the plugin never sees half a file
         self.last_items_text = text
+
+    def tally_lines(self) -> typing.List[str]:
+        """F9 in game: checks done / total for each category of this seed, all checks, and items received."""
+        done = set(self.checked_locations)
+        every = done | set(self.missing_locations)
+        lines = []
+        for category, label in TALLY_LABELS:
+            ids = [i for i in every if LOCATION_CATEGORY.get(i) == category]
+            if ids:
+                lines.append(f"tally {label}|{sum(1 for i in ids if i in done)}|{len(ids)}")
+        if every:
+            lines.append(f"tally All checks|{len(done & every)}|{len(every)}")
+        lines.append(f"tally Items received|{len(self.items_received)}|")
+        names = [self.item_names.lookup_in_game(item.item) for item in self.items_received]
+        cash = sum(int(n[1:].split(" ")[0]) for n in names if n.startswith("$") and n.endswith(" Cash"))
+        if cash:
+            lines.append(f"tally Cash received|${cash}|")
+        traps = [n for n in names if n in OUR_TRAPS]
+        if traps:
+            # "Traps survived 9 (Herbert Moon 4, Stampede 2, ...)", most frequent first
+            counts: typing.Dict[str, int] = {}
+            for n in traps:
+                short = "Animal Ambush" if n.endswith("Ambush Trap") else n[:-5] if n.endswith(" Trap") else n
+                counts[short] = counts.get(short, 0) + 1
+            detail = ", ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+            lines.append(f"tally Traps survived|{len(traps)} ({detail})|")
+        return lines
 
     async def read_outbox(self) -> None:
         try:
@@ -245,6 +382,7 @@ async def game_loop(ctx: RDRContext) -> None:
                 ctx.write_items()
                 await ctx.read_outbox()
                 await ctx.send_deaths()
+                await ctx.send_trap_links()
         except Exception as e:  # keep the bridge alive whatever happens
             logger.exception(f"Bridge error: {e}")
         await asyncio.sleep(1.0)

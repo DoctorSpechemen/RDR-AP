@@ -81,7 +81,7 @@ rcm_jenny1|stranger|Jenny's Faith|1|0|high
 rcm_jenny2|stranger|Jenny's Faith|2|1|high
 rcm_abandoned1|stranger|Let No Man Put Asunder|1|0|low
 rcm_abandoned3|stranger|Let No Man Put Asunder|3|0|low
-rcm_abandoned4|stranger|Let No Man Put Asunder|4|0|low
+rcm_abandoned4|stranger|Let No Man Put Asunder|4|1|high
 rcm_abandoned6|stranger|Let No Man Put Asunder|6|1|low
 rcm_lights1|stranger|Lights, Camera, Action|1|0|high
 rcm_lights2|stranger|Lights, Camera, Action|2|0|high
@@ -132,24 +132,3 @@ rcm_remember1|stranger|Remember My Family|1|0|high
 rcm_remember2|stranger|Remember My Family|2|0|high
 rcm_remember3|stranger|Remember My Family|3|0|high
 rcm_remember4|stranger|Remember My Family|4|1|high
-@cluster|Armadillo Arrival|Exodus in America;New Friends, Old Problems;Obstacles in Our Path;This is Armadillo, USA|0|
-@cluster|MacFarlane Ranch|Women and Cattle;Wild Horses, Tamed Passions;A Tempest Looms|0|
-@cluster|Armadillo Law|Political Realities in Armadillo;Justice in Pike's Basin;Spare the Rod, Spoil the Bandit|0|
-@cluster|West Dickens' Schemes|Old Swindler Blues|0|
-@cluster|The Burning|The Burning;Hanging Bonnie MacFarlane;You Shall Not Give False Testimony, Except for Profit|0|
-@cluster|Seth's Graveyard|Exhuming and Other Fine Hobbies;A Gentle Drive with Friends;Let the Dead Bury Their Dead|0|
-@cluster|Irish and Friends|Liars, Cheats and Other Proud Americans;A Frenchman, a Welshman and an Irishman;Man is Born Unto Trouble;On Shaky's Ground|0|
-@cluster|Assault on Fort Mercer|Can a Swindler Change His Spots?;The Sport of Kings, and Liars;The Assault on Fort Mercer|0|
-@cluster|Crossing the Border|We Shall Be Together in Paradise|0|
-@cluster|De Santa's Army|Civilization, At Any Price;The Demon Drink;Empty Promises;Mexican Caesar|0|
-@cluster|Landon Ricketts|The Gunslinger's Tragedy;Landon Ricketts Rides Again;Lucky in Love;The Mexican Wagon Train|0|
-@cluster|Fortuna's Rebels|My Sister's Keeper;Must a Savior Die?|0|
-@cluster|De Santa's Downfall|Cowards Die Many Times;Father Abraham;Captain De Santa's Downfall|0|
-@cluster|Reyes' Rebellion|The Great Mexican Train Robbery;The Gates of El Presidio;An Appointed Time|0|
-@cluster|Ross's Offer|Bear One Another's Burdens;Great Men Are Not Always Wise|0|
-@cluster|Dutch's Hideout|At Home with Dutch;For Purely Scientific Purposes;The Prodigal Son Returns (to Yale)|0|
-@cluster|The Truth|And You Will Know the Truth;And the Truth Will Set You Free|0|
-@cluster|Homecoming|The Outlaw's Return;Pestilence;Old Friends, New Problems|0|
-@cluster|Marston Ranch|By Sweat and Toil;A Continual Feast|0|
-@cluster|Father and Son|John Marston and Son;Wolves, Dogs and Sons;Spare the Love, Spoil the Child|0|
-@cluster|The Last Enemy|The Last Enemy That Shall Be Destroyed|0|

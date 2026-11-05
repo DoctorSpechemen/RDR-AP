@@ -47,3 +47,28 @@ class TestMinimal(RDRTestBase):
 
 class TestManyTraps(RDRTestBase):
     options = {"trap_percentage": 60}
+
+
+class TestBeta21Features(RDRTestBase):
+    options = {"bounty_checks": 20, "trap_link": True, "lightning_storm_trap_weight": 50, "trap_percentage": 50,
+               "found_item_popups": False, "popup_sounds": False}
+
+    def test_bounties_in_seed(self):
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        for i in range(1, 21):
+            self.assertIn(f"Bounty {i}", names)
+
+    def test_slot_data(self):
+        data = self.world.fill_slot_data()
+        self.assertTrue(data["trap_link"])
+        self.assertFalse(data["found_item_popups"])
+        self.assertIn("Lightning Storm Trap", data["trap_weights"])
+
+
+class TestNoBounties(RDRTestBase):
+    options = {"bounty_checks": 0}
+
+    def test_no_bounties(self):
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertFalse(any(n.startswith("Bounty ") and n[7:].isdigit() for n in names))  # not "Bounty Hunters: 5 Kills"
+

@@ -1,6 +1,10 @@
-# Red Dead Redemption (PC) - Archipelago Randomizer - BETA 2
+# Red Dead Redemption (PC) - Archipelago Randomizer 
+<img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
-APWorld + RedHook plugin (v6.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it.
+
+Claude AI Assisted in creating this project about 70%. The rest was cleanup by me and testing by me. AI is close to being very impressive but still overlooks very simple things and issues. 
+
+**Pre-release Beta 2.2.** APWorld + RedHook plugin (v6.3) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
 ## What you need
 - Red Dead Redemption (PC, Steam) and [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) 0.5.0 or newer.
@@ -20,25 +24,36 @@ Turn them off so the cloud does not put your normal saves back over the Archipel
 The setting has been reported to switch itself back on for some players, so check it again if your saves ever look wrong.
 
 ## How to play
-1. Generate a multiworld with a YAML (`game: Red Dead Redemption`).
+1. Generate a multiworld with a YAML.
 2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. After you enter your slot name the client
    can hang for a second or two: that is normal, it is moving your save files into place. `/gamedir <path>` if the game is not in
    the default Steam folder.
 3. Start the game **after** connecting. The client swaps in this multiworld's own saves (start a NEW GAME the first time).
-4. Play. Close the game first, then the client: your normal saves come back automatically.
+4. Play.
+
+  ** P.S. Upon finishing up a session, close the game first, then the client: your normal saves come back automatically.**
 
 ## Features
 - **Story missions play in the vanilla order.** Nothing is locked: every story mission you finish sends a check.
-- **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first.
-  Logic expects more Dead Eye later in the story (1 for Mexico up to 4 for the last mission); the game never stops you.
+- **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first one is sent.
 - **Weapons are items** (Cattleman start, random start or vanilla pickups).
-- **Outfits are items** (14, cosmetic). The US Marshal, US Army and Bureau uniforms are not, because the game itself keeps
-  them locked until late in the story.
-- **Filler:** Max Ammo, Dead Eye Refill (rarer), $15 / $35 / $55 cash (given again if a checkpoint reload takes it back).
-- **Traps** (every trap shows a big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
-  stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon (he whispers in your
-  ear), Dead Eye drain.
-- **DeathLink** with cowboy death messages.
+    - Cattleman Start, you start with the cattleman and get sent random weapons from items
+    - Random Start, you start with a random weapon and get sent random weapons from items
+    - Vanilla Pickups, vanilla experience
+- **Outfits are items** (13, cosmetic). Not included: the US Marshal, US Army and Bureau uniforms (the game itself keeps
+  them locked until late in the story) and Gentleman's Attire (every PC copy already has it).
+- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50 (cash, fame and honor are given again if
+  a checkpoint reload takes them back), and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
+  Chewing Tobacco.
+- **Traps** (every trap shows one big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
+  stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon, lightning
+  (three strikes land close to you, keep moving), Dead Eye drain.
+- **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things.
+- **TrapLink**: traps are shared with other TrapLink games; their traps become the closest Red Dead trap.
+- **"Found X for Player"** line at the bottom of the screen when one of your checks sends an item to someone else, and
+  **sounds** with item pop-ups and trap warnings (both can be turned off in the YAML).
+- **F9 tally** in game: checks done / total per category, items received, cash received and every trap you survived.
+- A **PopTracker pack** (`RDR-AP_PopTracker.zip`) that tracks your checks and items automatically.
 - **A separate save per multiworld**, and the mod's own progress per multiworld (`rdr1_ap_seeds\<seed>\`).
 - Big centred pop-ups for every received item.
 
@@ -46,11 +61,12 @@ The setting has been reported to switch itself back on for some players, so chec
 | Category | Check | Count |
 |---|---|---|
 | Story missions | finishing the mission | 57 |
-| Stranger missions | finishing the last part of each stranger's story | 18 |
+| Stranger missions | finishing each stranger's whole story (sent when the story ends) | 18 |
 | Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not | up to 90 |
 | Gang hideouts | clearing Pike's Basin, Twin Rocks, Fort Mercer, Tumbleweed, Gaptooth Breach, Nosalida, Tesoro Azul | 7 |
 | Hat tricks | shooting a hat off someone without killing them | up to 15 |
-| Minigames | wins in poker (each hand won), blackjack, arm wrestling, five finger fillet, horseshoes, liar's dice, duels | up to 5 each |
+| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels | up to 5 each |
+| Bounties | turning in wanted-poster bounties, dead or alive, counted in the order you finish them ("Bounty 1", "Bounty 2", ...) | up to 20 |
 | Shops | gear, maps, guns and tailor items in every general store, gunsmith and tailor (one check per item, buy it in any store that has it) | 30 |
 
 ## What is not allowed / not counted
@@ -59,9 +75,13 @@ The setting has been reported to switch itself back on for some players, so chec
 - Horse deeds are blocked in every store. Horses are not part of the randomizer.
 - Things you already found are blocked in every shop, so nothing is bought twice.
 - Consumables (food, medicine, ammo, tonics) are left alone.
-- Not tracked (yet): random encounters, fame/honor milestones, wanted-poster bounties, ambient challenges, treasure map
+- Not tracked (yet): random encounters, fame/honor milestones, ambient challenges, treasure map
   treasure, the Buffalo Rifle (needs Master Hunter 5).
-- Mission replays and reloads never send anything twice; a reload cannot count the same win twice.
+
+## In-game keys
+- **F9**: Archipelago tally (stays up 30 seconds, press F9 again to close it): checks done / total for each category, all
+  checks, items received, cash received and the traps you survived (needs the client connected for the totals). Gang kill
+  and hat trick counters stop showing once you reach the limit set in your YAML.
 
 ## If a check did not send
 - **In the client:** type `/resync`. Everything the game has found is sent to the server again (safe any time; repeats are
@@ -70,13 +90,15 @@ The setting has been reported to switch itself back on for some players, so chec
   `rdr1_ap_in.txt` in the game folder (create it if it is missing), write `sendcheck ` followed by the exact location name,
   and save. Example: `sendcheck A Gentle Drive with Friends`. The game reads the file within a second.
 
+## PopTracker
+Install [PopTracker](https://github.com/black-sliver/PopTracker/releases) 0.18 or newer, put `RDR-AP_PopTracker.zip` in its
+`packs` folder, open it and click the **AP** button to connect with your slot name. Checks that are not in your seed are
+hidden; grey checks need more Dead Eye in logic. Checks someone hinted for you are highlighted (needs a recent PopTracker).
+
 ## Known beta issues
-- Some story mission names are matched from script contents and may be wrong; "A Gentle Drive with Friends" has no match
-  yet (use `sendcheck`). Report the real title of any wrong check.
-- Stranger completion is read from the game's "stranger missions completed" stat (not confirmed yet in play).
-- Blackjack counts a win when you leave the table up money (per-hand detection is being worked on).
-- Outfit names are matched from the game's internal names to the wiki list; Gentleman's Attire and Deadly Assassin have been
-  seen in game, the rest are best guesses. Report any outfit that arrives under the wrong name.
+- Some story mission names are matched from script contents and may be wrong. Report the real title of any wrong check.
+  ("A Gentle Drive with Friends" has no script of its own; the plugin sends it when a story mission it cannot identify ends.)
+- Herbert Moon's voice lines have not been heard in game yet (the trap shows its warning; the voice is being worked on).
 - Keep Rockstar cloud saves off while using the save swap (see "Turn off cloud saves").
 
 ## Credits

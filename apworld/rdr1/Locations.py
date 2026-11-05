@@ -3,7 +3,7 @@ from typing import Dict, NamedTuple
 from BaseClasses import Location
 
 from .Data import (BASE_ID, BOUNTIES, CHALLENGES, CLUSTERS, GAME_NAME, GANG_FACTIONS, HIDEOUTS, MAX_CHALLENGE_RANKS,
-                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MINIGAMES, SHOP_LOCATIONS, STRANGERS)
+                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MAX_BOUNTY_CHECKS, MINIGAMES, SHOP_LOCATIONS, STRANGERS)
 
 
 class RDRLocation(Location):
@@ -54,6 +54,9 @@ def _build() -> Dict[str, LocData]:
     # Beta 2: hat tricks 6..15 (appended so earlier ids do not move)
     for i in range(OLD_MAX_HAT_TRICKS + 1, MAX_HAT_TRICKS + 1):
         add(f"Hat Trick {i}", "hat_trick", "New Austin", i)
+    # Beta 2.1: bounties in the order they are completed
+    for i in range(1, MAX_BOUNTY_CHECKS + 1):
+        add(f"Bounty {i}", "bounty", "New Austin" if i <= 8 else ("Nuevo Paraiso" if i <= 16 else "West Elizabeth"), i)
     return table
 
 

@@ -215,10 +215,19 @@ OUTFITS = {
 
 # The pause menu takes these three away again until late in the story (pause.c: unless story mission 57 is passed, the
 # wearable bit of uslaw, military and fbi is cleared every time the menu opens), so they are not sent as items.
-STORY_LOCKED_OUTFITS = {"Outfit: U.S. Marshal Uniform", "Outfit: U.S. Army Uniform", "Outfit: Bureau Uniform"}
+# Gentleman's Attire is unlocked from the start on PC (the Social Club / Rockstar Games Launcher bonus), so it is not an item either.
+STORY_LOCKED_OUTFITS = {"Outfit: U.S. Marshal Uniform", "Outfit: U.S. Army Uniform", "Outfit: Bureau Uniform",
+                        "Outfit: Gentleman's Attire"}
 
-FILLER_ITEMS = ["Max Ammo", "Dead Eye Refill", "$15 Cash", "$35 Cash", "$55 Cash"]
-REMOVED_FILLERS = 2   # "Fame +20", "Honor +20" (beta 2: a checkpoint reload took them back); their ids stay reserved
+# Fame / Honor +50 are back (beta 2.1): they use the two ids the old +20 items had, and the plugin gives them again if a
+# checkpoint reload takes them back (the reason they were removed in beta 2).
+FILLER_ITEMS = ["Max Ammo", "Dead Eye Refill", "$15 Cash", "$35 Cash", "$55 Cash", "Fame +50", "Honor +50"]
+REMOVED_FILLERS = 0
+# Consumables put straight into the satchel (display name -> the game's internal item name, tested with "additem").
+# They stay in the satchel, so a reload cannot take them back. Their ids come after the traps (appended).
+CONSUMABLES = {"Snake Oil": "SNAKE_OIL", "Tonic": "TONIC", "Medicine": "MEDS_LVL1", "Moonshine": "MOONSHINE",
+               "Chewing Tobacco": "CHEWING_TOBACCO"}
+ALL_FILLERS = FILLER_ITEMS + list(CONSUMABLES)
 # Relative weights for random filler (Dead Eye Refill came up far too often, so it has half the weight of the others).
 FILLER_WEIGHTS = {"Dead Eye Refill": 1}
 FILLER_DEFAULT_WEIGHT = 2
@@ -244,4 +253,10 @@ POSSE_TRAP = "Lawmen Posse Trap"
 # Bounty trap: removed for now (the plugin has "bountytrap" but the game shows no wanted state; waiting for the real crime event).
 # An invisible Herbert Moon follows John for 15 s and talks his ear off (plugin command "herbert").
 HERBERT_TRAP = "Herbert Moon Trap"
-EXTRA_TRAPS = [SLOWMO_TRAP, STAMPEDE_TRAP, OUT_OF_BULLETS_TRAP, POSSE_TRAP, HERBERT_TRAP]
+# Beta 2.1: a storm rolls in and three lightning strikes land 5-12 m from John (plugin command "lightning").
+LIGHTNING_TRAP = "Lightning Storm Trap"
+EXTRA_TRAPS = [SLOWMO_TRAP, STAMPEDE_TRAP, OUT_OF_BULLETS_TRAP, POSSE_TRAP, HERBERT_TRAP, LIGHTNING_TRAP]   # append only (ids)
+
+# Beta 2.1 bounties: completed wanted-poster bounties, counted in the order you finish them ("Bounty 1", "Bounty 2", ...).
+# The game has 20; logic expects the first 8 in New Austin, the next 8 in Nuevo Paraiso and the last 4 in West Elizabeth.
+MAX_BOUNTY_CHECKS = 20

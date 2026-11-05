@@ -12,7 +12,7 @@
 #include <vector>
 #include <filesystem>
 
-// RDR1 Archipelago plugin v6.1 BETA 2 (grew out of the feasibility test plugin; test commands are still available).
+// RDR1 Archipelago plugin v6.3 BETA 2.2 (grew out of the feasibility test plugin; test commands are still available).
 //
 // Keys (in game, once you have control of John):
 //   F7                 log player position
@@ -20,11 +20,8 @@
 //                      FIRST press: stand still ~2 seconds while the plugin calibrates, which finds stats that
 //                      change by themselves and ignores them. EVERY LATER press logs which of the remaining
 //                      stats changed since the previous press.
-//   F9                 give the next weapon in the list (+ some ammo). The log says which attempt (step 1-3) worked.
-//   F10                fill ammo to max for the common ammo types
-//   F11                spawn a RANDOM animal 4 metres away (cougar, bears, wolf, coyote, boar, bobcat, snake, or a harmless
-//                      rabbit). Hostile ones use the NEXT "recipe" (0,1,2,3) for making them attack, and the log then
-//                      tracks the animal for 25 seconds (distance, fighting, health).
+//   F9                 Archipelago tally: checks done / total per category and items received (v6.2; the old F9-F11
+//                      test keys for weapons, ammo and animals were removed)
 //
 // NEW in v5.14: hat trick rule: player fired within 1.5 s + hat off + actor alive (and still alive 1.5 s later) = "HAT TRICK SUCCESS (prototype)"; dead = failed.
 // NEW in v5.14: five finger fillet win/loss from the objective hash (MINIGAME WIN / MINIGAME LOSS log lines).
@@ -115,6 +112,59 @@ static int g_statScanMax = 256;
 // How far from the player the test cougar spawns.
 static const float COUGAR_SPAWN_DISTANCE = 14.0f;   // Beta: was 4 m, ambushes were too close to fight back
 
+// v6.2: spawn spots on real ground. Spawning at John's height a few metres away put a gang member high in the air on hilly ground
+// (tester). The plugin remembers where John has stood (every 2 s, the last ~4 minutes) and spawns at one of those spots that is
+// the right distance away. Only when John has not moved enough does it fall back to the old "same height as John" spot.
+struct Crumb { float x, y, z; };
+static std::deque<Crumb> g_crumbs;
+
+static void CrumbTick(ULONGLONG _Now)
+{
+	static ULONGLONG s_next = 0;
+
+	if (_Now < s_next) { return; }
+
+	s_next = _Now + 2000;
+
+	if (GAME::GET_GAME_STATE() != 3) { return; }
+
+	Vector3 p = ACTOR::GET_POSITION(ACTOR::GET_PLAYER_ACTOR(-1));
+
+	if (!g_crumbs.empty())
+	{
+		const Crumb& last = g_crumbs.back();
+		float dx = p.x - last.x, dy = p.y - last.y;
+
+		if (dx * dx + dy * dy < 9.0f) { return; }                  // stood still: nothing new
+		if (dx * dx + dy * dy > 250000.0f) { g_crumbs.clear(); }    // > 500 m in 2 s = a load or fast travel: forget the trail
+	}
+
+	g_crumbs.push_back({ p.x, p.y, p.z });
+
+	if (g_crumbs.size() > 120) { g_crumbs.pop_front(); }
+}
+
+// Picks a ground spot _MinD.._MaxD metres from John; false if there is none (then the caller uses its own spot).
+static bool GroundSpot(const Vector3& _From, float _MinD, float _MaxD, float& _X, float& _Y, float& _Z)
+{
+	std::vector<const Crumb*> good;
+
+	for (const Crumb& c : g_crumbs)
+	{
+		float dx = c.x - _From.x, dy = c.y - _From.y, d2 = dx * dx + dy * dy;
+
+		if (d2 >= _MinD * _MinD && d2 <= _MaxD * _MaxD && std::fabs(c.z - _From.z) < 25.0f) { good.push_back(&c); }
+	}
+
+	if (good.empty()) { return false; }
+
+	const Crumb* c = good[std::rand() % good.size()];
+
+	_X = c->x; _Y = c->y; _Z = c->z;
+
+	return true;
+}
+
 static const int MAX_ACTORS = 4096;
 
 
@@ -166,6 +216,8 @@ static int g_weaponIndex = 0;
 static std::set<int> g_apGranted;
 static std::string g_lastMissionScript;   // script of the story mission in progress ("" = free roam)
 static bool g_apMode = false;            // v5.21: true once the client has written an items file for a seed ("apmode 1" for tests)
+static int g_gangKillChecks = 10;    // v6.3: from the YAML via the client ("option gang_kill_checks N"): checks per gang
+static int g_hatTrickChecks = 15;    // v6.3: "option hat_tricks N"
 static bool g_vanillaWeapons = false;    // v5.21: option weapon_mode vanilla: weapons are not items, nothing is taken away
 static ULONGLONG g_syncQuietUntil = 0;   // v5.20: the weapon watch ignores changes until this time (set after a sync)
 static std::set<int> g_pendingReclaim;
@@ -244,6 +296,27 @@ static void ApBig(const std::string& _Title, const std::string& _Body)
 	HUD::PRINT_BIG(text.c_str(), 3.0f, true, g_bigStyle, 0);
 }
 
+// v6.2: sounds for pop-ups (game menu sounds, names from the game's own scripts). "sounds 0" / YAML option turns them off.
+static bool g_sounds = true;
+static bool g_foundPopups = true;
+
+static void ApSound(const char* _Name)
+{
+	if (!g_sounds || g_quiet) { return; }
+
+	AUDIO::PLAY_SOUND_FRONTEND(_Name);
+}
+
+// v6.2: "You found X for Player": a short line at the bottom of the screen when one of our checks sends an item to someone else.
+static void FoundPopup(const std::string& _Text)
+{
+	if (!g_foundPopups || g_quiet) { return; }
+
+	HUD::PRINT_SMALL_B(_Text.c_str(), 4.0f, true, 1, 0, 0, 0);
+
+	ApSound("HUD_MENU_SELECT_MASTER");
+}
+
 
 
 static std::string Trim(const std::string& _Text)
@@ -291,6 +364,15 @@ static float Distance(const Vector3& _A, const Vector3& _B)
 
 static std::map<std::string, long long> g_lastValues;
 
+// v6.2: the noisiest log lines (HUD/controllable watches, every shot and hit) only appear with "verbose 1". Checks, items, traps,
+// kills, missions and errors are always logged.
+static bool g_verbose = false;
+static bool QuietWatch(const std::string& _Name)
+{
+	return !g_verbose && (_Name == "hud_showing_objective" || _Name.rfind("player_controllable", 0) == 0 || _Name == "stat_message_showing"
+		|| _Name == "cutscene_playing" || _Name == "last_note_objective");
+}
+
 static void WatchValue(const std::string& _Name, long long _Value)
 {
 	auto it = g_lastValues.find(_Name);
@@ -299,14 +381,14 @@ static void WatchValue(const std::string& _Name, long long _Value)
 	{
 		g_lastValues[_Name] = _Value;
 
-		Log("watch " + _Name + " = " + std::to_string(_Value));
+		if (!QuietWatch(_Name)) { Log("watch " + _Name + " = " + std::to_string(_Value)); }
 
 		return;
 	}
 
 	if (it->second != _Value)
 	{
-		Log("watch " + _Name + ": " + std::to_string(it->second) + " -> " + std::to_string(_Value));
+		if (!QuietWatch(_Name)) { Log("watch " + _Name + ": " + std::to_string(it->second) + " -> " + std::to_string(_Value)); }
 
 		it->second = _Value;
 	}
@@ -1306,12 +1388,15 @@ static void SpawnAnimal(int _AnimalIndex, int _Recipe)
 
 	float x = position.x + std::cos(angle) * COUGAR_SPAWN_DISTANCE;
 	float y = position.y + std::sin(angle) * COUGAR_SPAWN_DISTANCE;
+	float z = position.z;
+
+	GroundSpot(position, COUGAR_SPAWN_DISTANCE - 4.0f, COUGAR_SPAWN_DISTANCE + 12.0f, x, y, z);   // v6.2: real ground if we have it
 
 	Layout layout = OBJECT::FIND_NAMED_LAYOUT("PlayerLayout");
 
 	std::string objectName = "ap_trap_animal_" + std::to_string(g_spawnCounter++);
 
-	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), animal.model, Vector2(x, y), position.z + 1.0f, Vector2(), 0.0f);
+	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), animal.model, Vector2(x, y), z + 1.0f, Vector2(), 0.0f);
 
 	if ((int)actor <= 0)
 	{
@@ -1566,10 +1651,13 @@ static void GangAttack(const std::string& _Args)
 
 		float x = position.x + std::cos(angle) * distance;
 		float y = position.y + std::sin(angle) * distance;
+		float z = position.z;
+
+		GroundSpot(position, distance - 6.0f, distance + 25.0f, x, y, z);   // v6.2: a spot John stood on, so nobody floats
 
 		std::string objectName = "ap_trap_gang_" + std::to_string(g_spawnCounter++);
 
-		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y), position.z + 1.0f, Vector2(), 0.0f);
+		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y), z + 1.0f, Vector2(), 0.0f);
 
 		if ((int)actor <= 0)
 		{
@@ -1596,8 +1684,7 @@ static void GangAttack(const std::string& _Args)
 			+ " faction now " + std::to_string(FACTION::GET_ACTOR_FACTION(actor)) + " at " + std::to_string((int)distance) + " m");
 	}
 
-	if (g_gangDistanceBase > 20.0f) { ApBig("Lawmen Posse", "The law is coming for you!"); }
-	else { ApBig("Ambush!", std::string(info.key) == "lawmen" ? "Lawmen are attacking!" : "A gang is attacking!"); }
+	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 }
 
 // "spawn" = random animal, next recipe.  "spawn wolf" = that animal.  "spawn wolf 2" = that animal and recipe 2.
@@ -1818,11 +1905,21 @@ static void ProgressLoad()
 
 	g_progressLoaded = true;
 
+	// v6.2 fix: one entry per line, the value is the LAST word. The old "in >> key >> value" stopped at the first key with a space
+	// ("gang:Walton's Gang 23"), so every entry after it (hat tricks, minigame wins, ...) was lost at each game start (tester).
 	std::ifstream in(PROGRESS_PATH);
-	std::string key;
-	long long value;
+	std::string line;
 
-	while (in >> key >> value) { g_progress[key] = value; }
+	while (std::getline(in, line))
+	{
+		line = Trim(line);
+
+		size_t space = line.find_last_of(' ');
+
+		if (line.empty() || space == std::string::npos) { continue; }
+
+		g_progress[Trim(line.substr(0, space))] = std::atoll(line.c_str() + space + 1);
+	}
 }
 
 static void ProgressSave()
@@ -2009,8 +2106,9 @@ static void CountGangKill(Actor _Actor, bool _ByPlayer)
 
 			Log(std::string("GANG KILL: ") + GANGS[i].name + " (faction " + std::to_string(faction) + ") total=" + std::to_string(g_gangKills[i]));
 
-			// v5.23: small progress line (the milestone kill shows the check instead)
-			if (g_gangKills[i] % 5 != 0 && g_gangKills[i] < 50)
+			// v5.23: small progress line (the milestone kill shows the check instead). v6.3: only while this seed still has
+			// kill checks left for the gang (no "3/5" lines after the last one).
+			if (g_gangKills[i] % 5 != 0 && g_gangKills[i] < 5 * g_gangKillChecks)
 			{
 				ApSay(std::string(GANGS[i].name) + ": " + std::to_string(g_gangKills[i] % 5) + "/5");
 			}
@@ -2030,6 +2128,7 @@ static void CountGangKill(Actor _Actor, bool _ByPlayer)
 		Log("gang kill ignored: faction 19 (scripted mission enemy)");
 	}
 }
+
 
 static std::string DescribeActor(Actor _Actor, Actor _Player)
 {
@@ -2087,7 +2186,7 @@ static void ScanActors()
 		{
 			Actor attacker = HEALTH::GET_LAST_ATTACKER(player);
 
-			Log("player hit: health=" + std::to_string(HEALTH::GET_ACTOR_HEALTH(player))
+			if (g_verbose) Log("player hit: health=" + std::to_string(HEALTH::GET_ACTOR_HEALTH(player))
 				+ (((int)attacker > 0 && ENTITY::IS_ACTOR_VALID(attacker)) ? " by " + DescribeActor(attacker, player) : std::string(" attacker unknown")));
 		}
 
@@ -2134,7 +2233,7 @@ static void ScanActors()
 
 				if (HEALTH::GET_LAST_ATTACKER(actor) == player)
 				{
-					Log("hit by player: " + DescribeActor(actor, player));
+					if (g_verbose) { Log("hit by player: " + DescribeActor(actor, player)); }
 				}
 			}
 
@@ -2218,8 +2317,8 @@ static void ScanActors()
 
 				ProgressSet("hattricks", tricks);
 
-				if (tricks <= 15) { SendCheck("Hat Trick " + std::to_string(tricks)); }
-				else { ApSay("Hat trick! (" + std::to_string(tricks) + ")"); }
+				// v6.3: past the seed's last hat trick check nothing is shown
+				if (tricks <= g_hatTrickChecks) { SendCheck("Hat Trick " + std::to_string(tricks)); }
 			}
 
 			g_hatCandidates.erase(g_hatCandidates.begin() + i);
@@ -3135,7 +3234,7 @@ static std::vector<std::pair<ULONGLONG, int>> g_shopRemovals;   // (time, weapon
 static std::set<std::string> g_sentChecks;
 static bool g_sentLoaded = false;
 
-static void SendCheck(const std::string& _Location)
+static void LoadSentChecks()
 {
 	if (!g_sentLoaded)
 	{
@@ -3146,6 +3245,11 @@ static void SendCheck(const std::string& _Location)
 
 		while (std::getline(in, line)) { line = Trim(line); if (!line.empty()) { g_sentChecks.insert(line); } }
 	}
+}
+
+static void SendCheck(const std::string& _Location)
+{
+	LoadSentChecks();
 
 	if (g_sentChecks.count(_Location))
 	{
@@ -3163,6 +3267,20 @@ static void SendCheck(const std::string& _Location)
 	out << _Location << "\n";
 
 	// v5.24: no popup for found locations (only received items are announced)
+}
+
+static void SendNextWin(const std::string& _Game)
+{
+	LoadSentChecks();
+
+	for (int n = 1; n <= 5; n++)
+	{
+		std::string loc = _Game + ": Win " + std::to_string(n);
+
+		if (!g_sentChecks.count(loc)) { Log("MINIGAME WIN: " + _Game + " -> " + loc); SendCheck(loc); return; }
+	}
+
+	Log("MINIGAME WIN: " + _Game + " (all 5 win checks already sent)");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -3507,7 +3625,7 @@ static void SlowmoCommand(const std::string& _Args)
 
 	Log("slowmo: time scale " + std::to_string(scale) + " for " + std::to_string(seconds) + " s, reads back " + std::to_string(REDHOOK::GET_TIME_SCALE()));
 
-	ApBig("Slow Motion", "Time is dragging its boots...");
+	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 }
 
 static void StormCommand(const std::string& _Args)
@@ -3525,6 +3643,50 @@ static void StormCommand(const std::string& _Args)
 	g_stormUntil = GetTickCount64() + (ULONGLONG)seconds * 1000;
 
 	Log("storm: stormy weather for " + std::to_string(seconds) + " s, previous weather " + std::to_string((int)g_stormPrevWeather) + ", now " + std::to_string((int)WEATHER::GET_WEATHER()));
+}
+
+// v6.2 lightning storm trap: three lightning strikes hit the ground 5-12 m from John (flash, thunder and a blast where it lands:
+// close enough to hurt if he does not move, not on top of him). No weather change: the storm arrived far too late.
+static std::vector<ULONGLONG> g_strikes;
+
+static void LightningCommand()
+{
+	// v6.2: strikes only. The stormy weather took far too long to roll in (tester), so the weather is left alone.
+	ULONGLONG now = GetTickCount64();
+
+	g_strikes = { now + 1500, now + 4500 + (ULONGLONG)(std::rand() % 1500), now + 8500 + (ULONGLONG)(std::rand() % 2000) };
+
+	Log("lightning: 3 strikes queued");
+}
+
+static void LightningTick(ULONGLONG _Now)
+{
+	while (!g_strikes.empty() && _Now >= g_strikes.front())
+	{
+		g_strikes.erase(g_strikes.begin());
+
+		Actor player = ACTOR::GET_PLAYER_ACTOR(-1);
+
+		if ((int)player <= 0) { continue; }
+
+		Vector3 p = ACTOR::GET_POSITION(player);
+		float a = (float)(std::rand() % 628) / 100.0f;
+		float d = 5.0f + (float)(std::rand() % 8);
+
+		Vector3 blast;
+		blast.x = p.x + std::cos(a) * d;
+		blast.y = p.y + std::sin(a) * d;
+		blast.z = p.z;
+
+		Vector3 sphere;
+		sphere.x = 2.5f; sphere.y = 2.5f; sphere.z = 2.5f;
+
+		WEATHER::TRIGGER_LIGHTNING_SEQUENCE();
+		AUDIO::AUDIO_PLAY_DISTANT_THUNDER();
+		EXPLOSION::_CREATE_EXPLOSION(&blast, "ExplosionMedium", (Actor)0, &sphere, false);
+
+		Log("lightning: strike " + std::to_string(d) + " m from John");
+	}
 }
 
 static void StampedeCommand(const std::string& _Args)
@@ -3613,7 +3775,7 @@ static void StampedeCommand(const std::string& _Args)
 
 	Log("stampede: " + kind + " x" + std::to_string(made) + " of " + std::to_string(count) + " spawned and following John");
 
-	ApBig("Stampede!", "Get out of the way!");
+	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 }
 
 // v5.20k: half of the emptied ammo comes back after 20 s ("You recovered some of your bullets...").
@@ -3674,7 +3836,7 @@ static void OutOfBulletsCommand()
 
 	Log(text);
 
-	ApBig("Out of Bullets", "Your guns are empty. Some ammo comes back in 20 seconds.");
+	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 }
 
 static void OutOfBulletsRestoreTick(ULONGLONG _Now)
@@ -3819,6 +3981,8 @@ static void MoreTrapsTick(ULONGLONG _Now)
 		}
 	}
 
+	LightningTick(_Now);
+
 	if (g_stormUntil != 0 && _Now >= g_stormUntil)
 	{
 		WEATHER::SET_WEATHER(g_stormPrevWeather, 0.5f);
@@ -3947,7 +4111,11 @@ static const StatCheck HIDEOUT_STATS[] =
 
 static const StatCheck MINIGAME_STATS[] =
 {
-	{ 424, "Poker" }, { 445, "Blackjack" },   // v5.26: poker = hands won (424, +1 per pot won, tested); 411 was session profit { 441, "Arm Wrestling" }, { 437, "Five Finger Fillet" },
+	// v5.26: poker = hands won (424, +1 per pot won, tested); 411 was session profit.
+	// v6.2 fix: a comment had swallowed Arm Wrestling and Five Finger Fillet on this line, so neither was tracked. Five Finger
+	// Fillet is counted from its "round won" objective instead (see FilletWin), so it is not in this table.
+	// Blackjack is counted per hand in BlackjackTick (445 is only the session profit, settled when you leave the table).
+	{ 424, "Poker" }, { 441, "Arm Wrestling" },
 	{ 433, "Horseshoes" }, { 429, "Liar's Dice" }, { 451, "Duels" },
 };
 
@@ -4018,13 +4186,11 @@ static void StatChecksTick(ULONGLONG _Now)
 
 		if (stable && it != g_statPrev.end() && v > it->second + 0.01f)
 		{
-			long long wins = ProgressGet(std::string("mg:") + m.name) + 1;
+			// v6.2: send the first "<game>: Win N" not sent yet (a separate win counter could fall behind the sent checks after a
+			// reload, and then a new win re-sent "Win 1": seen with Duels).
+			Log(std::string("MINIGAME WIN: ") + m.name + " (stat " + std::to_string(m.id) + " " + std::to_string(it->second) + " -> " + std::to_string(v) + ")");
 
-			ProgressSet(std::string("mg:") + m.name, wins);
-
-			Log(std::string("MINIGAME WIN: ") + m.name + " #" + std::to_string(wins) + " (stat " + std::to_string(m.id) + " " + std::to_string(it->second) + " -> " + std::to_string(v) + ")");
-
-			if (wins <= 5) { SendCheck(std::string(m.name) + ": Win " + std::to_string(wins)); }
+			SendNextWin(m.name);
 		}
 
 		g_statPrev[m.id] = v;
@@ -4113,6 +4279,121 @@ static void OutfitDump()
 }
 
 // v5.20m: random encounters (sn_btin, "unique world events encountered"). Once per second, only in normal play.
+// v6.2 blackjack, per hand (found with the tester, hand by hand): sn_bjh (448) = hands played, +1 the moment the cards are dealt;
+// sn_hlab (447) = hands lost, +1 when a hand is lost. So when the next hand is dealt, or the table is left, the previous hand was a
+// win if "hands lost" did not move while it was played. (A push is not a loss, so it counts as a win too; not tested yet.)
+
+static void BlackjackTick()
+{
+	static ULONGLONG s_next = 0;
+	static long long s_hands = -1, s_lostAtDeal = 0;
+	static bool s_inHand = false;
+	static ULONGLONG s_offTableSince = 0;
+
+	ULONGLONG now = GetTickCount64();
+
+	if (now < s_next) { return; }
+
+	s_next = now + 250;
+
+	if (GAME::GET_GAME_STATE() != 3) { s_hands = -1; s_inHand = false; return; }   // a load: start over, nothing is guessed
+
+	long long hands = (long long)(StatGet(448) + 0.5f);
+	long long lost = (long long)(StatGet(447) + 0.5f);
+
+	if (s_hands < 0 || hands < s_hands) { s_hands = hands; s_lostAtDeal = lost; s_inHand = false; return; }
+
+	if (hands > s_hands)                                    // new cards dealt: settle the hand before it
+	{
+		if (s_inHand)
+		{
+			if (lost == s_lostAtDeal) { SendNextWin("Blackjack"); }
+			else { Log("blackjack: hand lost"); }
+		}
+
+		s_hands = hands;
+		s_lostAtDeal = lost;
+		s_inHand = true;
+		s_offTableSince = 0;
+
+		Log("blackjack: hand " + std::to_string(hands) + " dealt (hands lost so far " + std::to_string(lost) + ")");
+
+		return;
+	}
+
+	// left the table: blackjack is not a "running minigame" to the game, so leaving is seen from the session stats it settles
+	// when you get up (410 sessions played, 445/450 money won, 446 best session). If none of them moves (a session that broke even),
+	// the last hand is simply settled when the next hand is dealt.
+	{
+		static float s_session[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
+		static const int IDS[4] = { 410, 445, 446, 450 };
+		bool changed = false;
+
+		for (int k = 0; k < 4; k++)
+		{
+			float v = StatGet(IDS[k]);
+
+			if (s_session[k] >= -0.5f && std::fabs(v - s_session[k]) > 0.01f) { changed = true; }
+
+			s_session[k] = v;
+		}
+
+		if (changed && s_inHand)
+		{
+			if (lost == s_lostAtDeal) { SendNextWin("Blackjack"); }
+			else { Log("blackjack: last hand lost"); }
+
+			s_inHand = false;
+
+			Log("blackjack: left the table");
+		}
+	}
+	(void)s_offTableSince;
+}
+
+// v6.2 bounties: completed wanted-poster bounties (sn_bhd 358 = brought in dead, sn_bha 359 = alive; event_bountyhunter adds 1
+// when a bounty is turned in). Sent as "Bounty 1", "Bounty 2", ... in the order you complete them. Baseline = the save's count
+// when the seed starts, and a high-water mark so a reload never counts the same bounty twice.
+static void BountyTick()
+{
+	static ULONGLONG s_next = 0;
+
+	ULONGLONG now = GetTickCount64();
+
+	if (now < s_next) { return; }
+
+	s_next = now + 1000;
+
+	if (GAME::GET_GAME_STATE() != 3 || now < g_syncQuietUntil) { return; }
+
+	float dead = StatGet(358), alive = StatGet(359);
+
+	if (dead < 0.0f || alive < 0.0f) { return; }
+
+	long long value = (long long)(dead + alive + 0.5f);
+	long long high = ProgressHas("bty_high") ? ProgressGet("bty_high") : -1;
+
+	if (high < 0)
+	{
+		ProgressSet("bty_base", value);
+		ProgressSet("bty_high", value);
+
+		Log("bounties: baseline set to " + std::to_string(value));
+
+		return;
+	}
+
+	if (value > high)
+	{
+		for (long long n = high + 1; n <= value; n++)
+		{
+			SendCheck("Bounty " + std::to_string(n - ProgressGet("bty_base")));
+		}
+
+		ProgressSet("bty_high", value);
+	}
+}
+
 static void EncounterTick()
 {
 	// v6.1 beta 2: turned off. sn_btin counts every world event, not only unique encounters like rescues.
@@ -4933,13 +5214,12 @@ struct ScriptInfo
 {
 	std::string kind;       // mission | stranger
 	std::string location;   // Archipelago location name
-	std::string group;      // mission: cluster, stranger: part number
+	std::string group;      // mission: story chapter (unused), stranger: part number
 	bool final = false;     // stranger: last part of the arc
 };
 
 static std::map<unsigned int, std::string> g_hashScript;
 static std::map<std::string, ScriptInfo> g_scriptInfo;
-static std::map<std::string, std::string> g_clusterMissions;   // v5.24: cluster -> its missions in story order (for the popup)
 static bool g_mapsLoaded = false;
 
 static void LoadApMaps()
@@ -4978,16 +5258,7 @@ static void LoadApMaps()
 				pos = bar + 1;
 			}
 
-			if (f.size() >= 3 && f[0] == "@cluster")
-			{
-				std::string list = f[2];
-
-				for (size_t pos = list.find(';'); pos != std::string::npos; pos = list.find(';', pos)) { list.replace(pos, 1, ", "); }
-
-				g_clusterMissions[f[1]] = list;
-
-				continue;
-			}
+			if (!f.empty() && !f[0].empty() && f[0][0] == '@') { continue; }   // old "@cluster" lines (beta 1)
 
 			if (f.size() < 5) { continue; }
 
@@ -5009,32 +5280,6 @@ static void LoadApMaps()
 	}
 }
 
-// ---------- AP mode, options, clusters ----------
-
-// v6.1 BETA 2: story missions are no longer items. Missions play in the vanilla order and every finished mission sends its check
-// at once, so nothing is ever "locked" or held back. (Cluster items from older seeds are still understood but change nothing.)
-static bool ClusterReceived(const std::string& _Cluster)
-{
-	(void)_Cluster;
-	return true;
-}
-
-static void FlushPendingChecks(const std::string& _Cluster)
-{
-	for (const auto& kv : g_scriptInfo)
-	{
-		const ScriptInfo& info = kv.second;
-
-		if (info.kind == "mission" && info.group == _Cluster && ProgressGet("pending:" + info.location) > 0)
-		{
-			ProgressSet("pending:" + info.location, 0);
-
-			Log("pending check released: " + info.location);
-
-			SendCheck(info.location);
-		}
-	}
-}
 
 // ---------- mission / stranger tracker ----------
 static std::string g_lastStrangerScript;
@@ -5046,6 +5291,24 @@ static bool g_trackerAfterLoad = false;
 
 static void MissionCompleted()
 {
+	// v6.3: 56 mission scripts for 57 story missions: "A Gentle Drive with Friends" is the one without a script of its own, so a
+	// story mission that ends without a known script is that one (once).
+	if (g_lastMissionScript.empty() || g_scriptInfo.find(g_lastMissionScript) == g_scriptInfo.end())
+	{
+		LoadSentChecks();
+
+		if (!g_sentChecks.count("A Gentle Drive with Friends"))
+		{
+			Log("MISSION DONE: unknown script '" + g_lastMissionScript + "', taken as A Gentle Drive with Friends (the only mission without a script)");
+
+			SendCheck("A Gentle Drive with Friends");
+
+			g_lastMissionScript.clear();
+
+			return;
+		}
+	}
+
 	if (g_lastMissionScript.empty())
 	{
 		Log("MISSION DONE: no mission objective was seen (unmapped mission). Use 'sendcheck <name>' if a check is missing.");
@@ -5070,24 +5333,88 @@ static void MissionCompleted()
 
 	const ScriptInfo& info = it->second;
 
-	Log("MISSION DONE: " + info.location + " (script " + g_lastMissionScript + ", cluster " + info.group + ")");
+	Log("MISSION DONE: " + info.location + " (script " + g_lastMissionScript + ")");
 
-	if (!ClusterReceived(info.group))
-	{
-		ProgressSet("pending:" + info.location, 1);
-
-		ApSay(Tag("red", "Mission locked") + "\n" + info.location + "\nThe check is saved and sent when you receive " + Tag("blue", info.group) + ".");
-	}
-	else
-	{
-		SendCheck(info.location);
-	}
+	SendCheck(info.location);
 
 	g_lastMissionScript.clear();
 }
 
+// v6.2: the game only adds to "stranger missions completed" (sn_rcmc) in the FINAL part of a stranger's story (in the decompiled
+// scripts only rcm_water4, rcm_abandoned6, ... touch it). The objective last seen is not always that stranger: Water and Honesty's
+// last part was credited to "Let No Man Put Asunder" part 1 because John had just met that stranger (tester). So the plugin now
+// watches which final-part stranger script is RUNNING, and credits the arc whose final script ran last.
+static std::string g_finalStrangerScript;
+static ULONGLONG g_finalStrangerSeen = 0;
+
+static void FinalStrangerWatch(ULONGLONG _Now)
+{
+	static ULONGLONG s_next = 0;
+
+	if (_Now < s_next) { return; }
+
+	s_next = _Now + 1000;
+
+	// arcs that also count as "stranger missions completed" in the game but are not checks here: when one of them ends, nothing
+	// is credited
+	static const char* OTHER_FINALS[] = { "rcm_blackwater5", "rcm_bonnie3", "rcm_lovesahorse3", "rcm_mackenna2", "rcm_marshal4",
+		"rcm_merchant4", "rcm_mother4", "rcm_return2", "rcm_ricketts2", "rcm_sasquatch7", "rcm_seth2" };
+
+	for (const char* name : OTHER_FINALS)
+	{
+		if (CORE::_IS_ANY_NAMED_SCRIPT_RUNNING(name))
+		{
+			if (g_finalStrangerScript != name) { Log(std::string("tracker: non-check stranger arc ending: ") + name); }
+
+			g_finalStrangerScript = name;
+			g_finalStrangerSeen = _Now;
+		}
+	}
+
+	for (const auto& kv : g_scriptInfo)
+	{
+		if (kv.second.kind == "stranger" && kv.second.final && CORE::_IS_ANY_NAMED_SCRIPT_RUNNING(kv.first.c_str()))
+		{
+			if (g_finalStrangerScript != kv.first) { Log("tracker: final stranger part running: " + kv.second.location + " (" + kv.first + ")"); }
+
+			g_finalStrangerScript = kv.first;
+			g_finalStrangerSeen = _Now;
+		}
+	}
+}
+
 static void StrangerPartCompleted()
 {
+	// prefer the final-part script that was running (within the last 2 minutes): sn_rcmc only moves at the end of an arc
+	if (!g_finalStrangerScript.empty() && GetTickCount64() < g_finalStrangerSeen + 120000)
+	{
+		auto f = g_scriptInfo.find(g_finalStrangerScript);
+
+		if (f == g_scriptInfo.end())
+		{
+			Log("STRANGER DONE: " + g_finalStrangerScript + " ended, which is not a check");
+
+			g_finalStrangerScript.clear();
+			g_lastStrangerScript.clear();
+
+			return;
+		}
+
+		if (f != g_scriptInfo.end())
+		{
+			Log("STRANGER DONE: " + f->second.location + " (final part " + g_finalStrangerScript + " was running)");
+
+			SendCheck(f->second.location);
+
+			if (f->second.location == "Remember My Family") { std::ofstream out(OUTBOX_PATH, std::ios::app); out << "GOAL: Remember My Family\n"; }
+
+			g_finalStrangerScript.clear();
+			g_lastStrangerScript.clear();
+
+			return;
+		}
+	}
+
 	auto it = g_scriptInfo.find(g_lastStrangerScript);
 
 	if (g_lastStrangerScript.empty() || it == g_scriptInfo.end())
@@ -5101,7 +5428,10 @@ static void StrangerPartCompleted()
 
 	Log("STRANGER DONE: " + info.location + " part " + info.group + (info.final ? " (last part)" : "") + " (script " + g_lastStrangerScript + ")");
 
-	if (info.final)
+	// Fallback when no final-part script was seen running: the counter only moves when a stranger's story ends (confirmed twice by
+	// the tester: Water and Honesty, Let No Man Put Asunder), so the arc of the last stranger seen is done even if our map does not
+	// call that part the final one (the map had "Let No Man Put Asunder" ending in part 6; it ends in part 4).
+	if (true)
 	{
 		SendCheck(info.location);
 
@@ -5118,6 +5448,8 @@ static void StrangerPartCompleted()
 static void MissionTrackerTick(ULONGLONG _Now)
 {
 	if (!g_mapsLoaded) { LoadApMaps(); }
+
+	if (GAME::GET_GAME_STATE() == 3) { FinalStrangerWatch(_Now); }
 
 	if (GAME::GET_GAME_STATE() != 3)
 	{
@@ -5157,12 +5489,6 @@ static void MissionTrackerTick(ULONGLONG _Now)
 				if (g_lastMissionScript != h->second)
 				{
 					Log("tracker: mission " + (info != g_scriptInfo.end() ? info->second.location : std::string("?")) + " (" + h->second + ")");
-
-					if (info != g_scriptInfo.end() && !ClusterReceived(info->second.group))
-					{
-						ApSay(Tag("red", "This mission is locked") + "\n" + info->second.location + " needs " + Tag("blue", info->second.group)
-							+ ".\nYou can play it, but the check waits until you receive it.");
-					}
 				}
 
 				g_lastMissionScript = h->second;
@@ -5214,6 +5540,12 @@ static const char* ITEMS_PATH = "rdr1_ap_items.txt";
 // stands right behind John and talks: shopkeeper chatter contexts from shopkeeper_brain / rdr2init (SHOP_BROWSE_CHATTER etc.),
 // spoken with SAY_SINGLE_LINE_STRING like the scripts do. He follows John for 15 s, then he is removed.
 static Actor g_herbertActor = 0;
+// v6.2: the tester heard nothing. Voices are assigned per actor (SET_AMBIENT_VOICE_NAME; in the scripts the voice names are the
+// model names), so Herbert now gets his own voice explicitly. "herbertvoice <name>", "herbertsay <line>" and "herbertvisible 1"
+// change the voice, the lines and the visibility for testing without a rebuild.
+static std::string g_herbertVoice = "MISC_HerbertMoon";
+static std::string g_herbertForcedLine;
+static bool g_herbertVisible = false;
 static ULONGLONG g_herbertNextLine = 0;
 static ULONGLONG g_herbertUntil = 0;
 static int g_herbertLines = 0;
@@ -5222,7 +5554,7 @@ static void HerbertSpeak()
 {
 	static const char* LINES[] = { "SHOP_BROWSE_CHATTER", "SHOP_ENTER", "SHOP_TRANSACTION", "SHOP_END_TRANSACTION", "SHOP_BROWSE_CHATTER" };
 
-	const char* line = LINES[std::rand() % 5];
+	const char* line = g_herbertForcedLine.empty() ? LINES[std::rand() % 5] : g_herbertForcedLine.c_str();
 
 	Invoke<0xBA734A15, void>(g_herbertActor, line, 1, 1, 0, 0, 1, 0);   // AUDIO::SAY_SINGLE_LINE_STRING
 
@@ -5265,14 +5597,16 @@ static void HerbertCommand()
 
 	if ((int)g_herbertActor <= 0) { Log("herbert: spawn failed"); g_herbertActor = 0; return; }
 
-	ACTORDRAW::SET_DRAW_ACTOR(g_herbertActor, false);
+	if (!g_herbertVisible) { ACTORDRAW::SET_DRAW_ACTOR(g_herbertActor, false); }
 	ACTOR::SET_ACTOR_INVULNERABILITY(g_herbertActor, true);
+	AUDIO::SET_AMBIENT_VOICE_NAME(g_herbertActor, g_herbertVoice.c_str());
+	Log("herbert: voice " + g_herbertVoice + (g_herbertVisible ? ", visible" : ", invisible"));
 
 	g_herbertLines = 0;
 	g_herbertNextLine = GetTickCount64() + 300;
 	g_herbertUntil = GetTickCount64() + 15000;
 
-	ApBig("Herbert Moon", "Herbert Moon speaks sweet nothings into your ear...");
+	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 
 	Log("herbert: spawned " + std::to_string((int)g_herbertActor));
 }
@@ -5340,9 +5674,9 @@ static void Announce(const std::string& _Title, const std::string& _Text, bool _
 {
 	if (g_itemsThisTick > 3) { return; }
 
-	(void)_Big;   // Beta: every received item uses the big pop-up only
-
 	ApBig(_Title, _Text);
+
+	ApSound(_Big ? "HUD_MINIGAME_WIN_MASTER" : "ITEM_USE_SUCCESS_MASTER");   // v6.2: progression items get the bigger sound
 }
 
 // v6.1 beta 2: Fame / Honor / Cash fillers survive a checkpoint reload. The game restores the stats of its last checkpoint when a
@@ -5437,22 +5771,6 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 		return;
 	}
 
-	for (const auto& kv : g_scriptInfo)
-	{
-		if ((kv.second.kind == "mission" && kv.second.group == _Item) || (g_clusterMissions.count(_Item) && kv.first == g_scriptInfo.begin()->first))
-		{
-			ProgressSet("cluster:" + _Item, 1);
-
-			// v5.24: list the missions in the cluster
-			std::string missions = g_clusterMissions.count(_Item) ? g_clusterMissions[_Item] : std::string();
-
-			Announce("Missions Unlocked: " + _Item, missions + " (" + from + ")", true);
-
-			FlushPendingChecks(_Item);
-
-			return;
-		}
-	}
 
 	if (_Item.rfind("Outfit: ", 0) == 0)
 	{
@@ -5485,8 +5803,30 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 		return;
 	}
 
-	if (_Item == "Fame +20") { GrantStat(3, 20.0f); ApBig("Fame +20", from); return; }
-	if (_Item == "Honor +20") { GrantStat(1, 20.0f); ApBig("Honor +20", from); return; }
+
+	// v6.2: Fame / Honor +50 (GrantStat gives them again if a checkpoint reload takes them back)
+	if (_Item == "Fame +50") { GrantStat(3, 50.0f); ApBig("Fame +50", from); ApSound("HUD_NOTORIETY_MASTER"); return; }
+	if (_Item == "Honor +50") { GrantStat(1, 50.0f); ApBig("Honor +50", from); ApSound("HUD_HONOR_MASTER"); return; }
+
+	// v6.2: consumables go straight into the satchel (internal names tested with "additem")
+	{
+		static const std::map<std::string, std::string> CONSUMABLES = {
+			{ "Snake Oil", "SNAKE_OIL" }, { "Tonic", "TONIC" }, { "Medicine", "MEDS_LVL1" }, { "Moonshine", "MOONSHINE" },
+			{ "Chewing Tobacco", "CHEWING_TOBACCO" },
+		};
+		auto c = CONSUMABLES.find(_Item);
+
+		if (c != CONSUMABLES.end())
+		{
+			int result = INVENTORY::ADD_ITEM(c->second.c_str(), ACTOR::GET_PLAYER_ACTOR(-1), 1);
+
+			Log("consumable: " + _Item + " (" + c->second + ") added, result " + std::to_string(result));
+
+			Announce(_Item, from, false);
+
+			return;
+		}
+	}
 
 	if (_Item.size() > 6 && _Item[0] == '$' && _Item.find(" Cash") != std::string::npos)
 	{
@@ -5512,7 +5852,8 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 	if (_Item == "Slow Motion Trap") { QueueTrap("slowmo 8", "Time Slows Down", "Everything feels heavy..."); return; }
 	if (_Item == "Stampede Trap") { QueueTrap("stampede", "The Ground Is Shaking", "Something big is coming!"); return; }
 	if (_Item == "Out of Bullets Trap") { QueueTrap("outofbullets", "Your Gunbelt Feels Light", "Check your ammo..."); return; }
-	if (_Item == "Herbert Moon Trap") { QueueTrap("herbert", "Herbert Moon", "Herbert Moon speaks sweet nothings into your ear..."); return; }
+	if (_Item == "Lightning Storm Trap") { QueueTrap("lightning", "Bolt From The Blue", "Lightning is about to strike close by!"); return; }
+	if (_Item == "Herbert Moon Trap") { QueueTrap("herbert", "Herbert Moon has something to say...", ""); return; }
 
 	Log("ap item: unknown item '" + _Item + "'");
 
@@ -5587,6 +5928,43 @@ static bool UseSeed(const std::string& _Seed)
 	return true;
 }
 
+// v6.2 tally (F9): the client writes "tally <label>|<done>|<total>" lines into the items file (it knows every location of the
+// seed); F9 shows them in one help box. Without a client it falls back to counting the checks this game has sent.
+static std::vector<std::string> g_tally;
+static ULONGLONG g_tallyUntil = 0;   // the tally stays up 30 s, or until F9 is pressed again
+
+static void HideTally()
+{
+	Invoke<0x0095B908, void>();   // HUD::HUD_CLEAR_HELP (hash of the name; used by the game's scripts, not in the SDK header)
+
+	g_tallyUntil = 0;
+}
+
+static void ShowTally()
+{
+	if (g_tallyUntil != 0 && GetTickCount64() < g_tallyUntil) { HideTally(); return; }   // second press closes it
+
+	std::string text = "Archipelago";
+
+	if (!g_tally.empty())
+	{
+		for (const std::string& entry : g_tally) { text += " | " + entry; }
+	}
+	else
+	{
+		text += " | Checks sent " + std::to_string(g_sentChecks.size()) + " | Items received " + std::to_string(ProgressGet("ap_index"))
+			+ " | (connect the client for totals)";
+	}
+
+	HUD::PRINT_HELP_B(text.c_str(), 30.0f, true, 1, 0, 0, 0, 0);
+
+	g_tallyUntil = GetTickCount64() + 30000;
+
+	ApSound("HUD_MENU_JOURNAL_MASTER");
+
+	Log("tally: " + text);
+}
+
 static void ApItemsTick()
 {
 	std::ifstream in(ITEMS_PATH);
@@ -5599,6 +5977,28 @@ static void ApItemsTick()
 	while (std::getline(in, line)) { line = Trim(line); if (!line.empty()) { lines.push_back(line); } }
 
 	in.close();
+
+	{
+		std::vector<std::string> tally;
+
+		for (const std::string& l : lines)
+		{
+			if (l.rfind("tally ", 0) != 0) { continue; }
+
+			std::string rest = l.substr(6);
+			size_t a = rest.find('|'), b = rest.find('|', a == std::string::npos ? a : a + 1);
+
+			if (a == std::string::npos) { continue; }
+
+			std::string label = rest.substr(0, a);
+			std::string done = b == std::string::npos ? rest.substr(a + 1) : rest.substr(a + 1, b - a - 1);
+			std::string total = b == std::string::npos ? std::string() : rest.substr(b + 1);
+
+			tally.push_back(label + " " + done + (total.empty() ? std::string() : "/" + total));
+		}
+
+		g_tally.swap(tally);
+	}
 
 	long long applied = ProgressGet("ap_index");
 	long long appliedBefore = applied;
@@ -5624,6 +6024,11 @@ static void ApItemsTick()
 		{
 			std::string rest = Trim(l.substr(7));
 
+			if (rest == "sounds off") { g_sounds = false; } else if (rest == "sounds on") { g_sounds = true; }
+			if (rest.rfind("gang_kill_checks ", 0) == 0) { g_gangKillChecks = std::atoi(rest.c_str() + 17); }
+			if (rest.rfind("hat_tricks ", 0) == 0) { g_hatTrickChecks = std::atoi(rest.c_str() + 11); }
+			if (rest == "found_popups off") { g_foundPopups = false; } else if (rest == "found_popups on") { g_foundPopups = true; }
+
 			if (rest == "weapon_mode vanilla") { g_vanillaWeapons = true; }
 			else if (rest.rfind("weapon_mode ", 0) == 0) { g_vanillaWeapons = false; }
 
@@ -5631,6 +6036,8 @@ static void ApItemsTick()
 
 			continue;
 		}
+
+		if (l.rfind("tally ", 0) == 0) { continue; }
 
 		size_t a = l.find('|');
 
@@ -5677,7 +6084,7 @@ static void TrapQueueTick(ULONGLONG _Now)
 
 	Log("trap warning: " + trap.title + ", '" + trap.command + "' fires in " + std::to_string(delay) + " ms");
 
-	if (!trap.title.empty()) { ApBig(trap.title, trap.text); }
+	if (!trap.title.empty()) { ApBig(trap.title, trap.text); ApSound("HUD_FAILED_DELAY_MASTER"); }
 
 	g_delayed.push_back({ _Now + delay, trap.command });
 }
@@ -5691,7 +6098,7 @@ void Application::Initialize(HMODULE _Module)
 {
 	ScriptRegister(_Module, []
 	{
-		Log("script v6.1 beta 2 started");
+		Log("script v6.3 beta 2.2 started");
 
 			LoadMissionTable();
 
@@ -5713,7 +6120,7 @@ void Application::Initialize(HMODULE _Module)
 			}
 		}
 
-		ApSay(Tag("red", "Red Dead Redemption") + " randomizer beta 2 loaded");
+		ApSay(Tag("red", "Red Dead Redemption") + " randomizer beta 2.2 loaded");
 
 		ULONGLONG nextBeat = 0;
 		ULONGLONG nextPoll = 0;
@@ -5750,6 +6157,10 @@ void Application::Initialize(HMODULE _Module)
 				WatchValue("stat_money", (int)StatGet(0));
 				WatchValue("stat_btin", (int)StatGet(408));
 				EncounterTick();
+
+				BountyTick();
+
+				BlackjackTick();
 				MissionTrackerTick(now);
 				StatChecksTick(now);
 				WatchValue("stat_btcm", (int)StatGet(409));
@@ -5803,7 +6214,7 @@ void Application::Initialize(HMODULE _Module)
 				{
 					lastShotLog = now;
 
-					Log("player fired");
+					if (g_verbose) { Log("player fired"); }
 				}
 
 				wasShooting = shooting;
@@ -5828,9 +6239,23 @@ void Application::Initialize(HMODULE _Module)
 
 					if (note == 1616807014)
 					{
-						Log("MINIGAME WIN (five finger fillet, prototype)");
+						// v6.2: every won game is a check: the first "Five Finger Fillet: Win N" (1-5) not sent yet, so checks
+						// sent by hand or before a reload are never sent twice and none is skipped.
+						LoadSentChecks();
 
-						Say("Fillet won!");
+						for (int n = 1; n <= 5; n++)
+						{
+							std::string loc = "Five Finger Fillet: Win " + std::to_string(n);
+
+							if (!g_sentChecks.count(loc))
+							{
+								Log("MINIGAME WIN: Five Finger Fillet -> " + loc);
+
+								SendCheck(loc);
+
+								break;
+							}
+						}
 					}
 					else if (note == 1122126072)
 					{
@@ -6125,7 +6550,7 @@ void Application::Initialize(HMODULE _Module)
 
 								Log("drunk: on for " + std::to_string(seconds) + " s, is_drunk=" + std::to_string(HEALTH::IS_ACTOR_DRUNK(drunkPlayer)));
 
-								ApBig("Drunk!", "Hic! Somebody spiked the whiskey.");
+								// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 							}
 							else
 							{
@@ -6256,6 +6681,25 @@ void Application::Initialize(HMODULE _Module)
 						ApModeChanged();
 					}
 					else if (command == "herbert") { HerbertCommand(); }
+					else if (command == "lightning") { LightningCommand(); }
+					else if (command.rfind("herbertvoice ", 0) == 0) { g_herbertVoice = Trim(command.substr(13)); Log("herbert: voice set to " + g_herbertVoice); }
+					else if (command.rfind("herbertsay", 0) == 0) { g_herbertForcedLine = command.size() > 11 ? Trim(command.substr(11)) : std::string(); Log("herbert: line set to '" + g_herbertForcedLine + "'"); }
+					else if (command == "herbertvisible 1" || command == "herbertvisible 0") { g_herbertVisible = command == "herbertvisible 1"; }
+					else if (command.rfind("found ", 0) == 0) { FoundPopup(command.substr(6)); }
+					else if (command == "sounds 1" || command == "sounds 0") { g_sounds = command == "sounds 1"; }
+					else if (command.rfind("traplink ", 0) == 0)
+					{
+						// v6.2 TrapLink: "traplink <our trap item>|<who sent it>" from the client (a trap another game received)
+						std::string rest = command.substr(9);
+						size_t bar = rest.find('|');
+						std::string item = Trim(rest.substr(0, bar));
+						std::string who = bar == std::string::npos ? std::string("TrapLink") : Trim(rest.substr(bar + 1));
+
+						Log("traplink: " + item + " from " + who);
+
+						if (item.find("Trap") != std::string::npos) { ApplyApItem(item, who + " (TrapLink)"); }
+					}
+					else if (command == "verbose 1" || command == "verbose 0") { g_verbose = command == "verbose 1"; Log(std::string("verbose log ") + (g_verbose ? "on" : "off")); }
 					else if (command == "outfitdump") { OutfitDump(); }
 					else if (command.rfind("outfitgive ", 0) == 0) { OutfitGive(command.substr(11)); }
 					else if (command == "posse")
@@ -6558,6 +7002,7 @@ void Application::Initialize(HMODULE _Module)
 				nextWeaponWatch = now + 1000;
 
 				SyncTick(now);
+				CrumbTick(now);
 				BrawlTick(now);
 				MoreTrapsTick(now);
 				WeaponWatch();
@@ -6606,19 +7051,11 @@ void Application::Initialize(HMODULE _Module)
 				}
 			}
 
+			// v6.2: F9 = Archipelago tally. (F9 give weapon, F10 max ammo and F11 spawn animal were test keys and are gone:
+			// they let anyone skip the randomizer. The same tests are still available as commands in rdr1_ap_in.txt.)
 			if (KeyEdge(KEY_F9, f9))
 			{
-				GiveNextWeapon();
-			}
-
-			if (KeyEdge(KEY_F10, f10))
-			{
-				MaxAmmo();
-			}
-
-			if (KeyEdge(KEY_F11, f11))
-			{
-				SpawnCommand("");
+				ShowTally();
 			}
 
 			ScriptWait(0);

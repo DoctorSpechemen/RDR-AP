@@ -17,13 +17,15 @@ gang member kills (every 5 kills per gang, up to 50: Walton's Gang, Banditos, Re
 blackjack hands, arm wrestling, five finger fillet, horseshoes, liar's dice, duels), and shop purchases: gear, maps and guns
 from every general store, gunsmith and tailor (one check per item, buy it in any store that has it; horse deeds are blocked).
 
-Not tracked in this beta: random encounters, fame/honor milestones, bounties, challenge ranks, treasure map treasure.
+Bounties: every wanted-poster bounty you turn in (dead or alive) is a check, counted in order.
+
+Not tracked in this beta: random encounters, fame/honor milestones, challenge ranks, treasure map treasure.
 
 ## What items can be sent to me?
 
 Dead Eye upgrades, weapons (unless you use vanilla weapon pickups), outfits, Max Ammo, Dead Eye Refill, cash
 ($15 / $35 / $55), and traps: animal ambush, gang attack, lawmen posse, stampede, slow motion,
-drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon (he whispers in your ear) and a rare
+drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon (he whispers in your ear), a lightning storm and a rare
 Dead Eye drain. Every trap shows a warning first and fires 3-5 seconds later.
 
 Guns and gear you pick up or buy that Archipelago has not sent you are taken away again after 5 seconds ("That weapon

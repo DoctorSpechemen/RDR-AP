@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from Options import Choice, DeathLink, DefaultOnToggle, OptionGroup, PerGameCommonOptions, Range, Toggle
 
-from .Data import MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS
+from .Data import MAX_BOUNTY_CHECKS, MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS
 
 
 class Goal(Choice):
@@ -64,6 +64,15 @@ class MinigameWins(Range):
     default = 3
 
 
+class BountyChecks(Range):
+    """Number of bounty checks: completing wanted-poster bounties (dead or alive), counted in the order you finish them.
+    0 disables them."""
+    display_name = "Bounty Checks"
+    range_start = 0
+    range_end = MAX_BOUNTY_CHECKS
+    default = 5
+
+
 class IncludeShops(DefaultOnToggle):
     """Buying gear, maps, guns and tailor items in the general stores, gunsmiths and tailors of every town is a check (one check per item, buy it in
     any store that has it). Horse deeds are blocked; consumables are left alone."""
@@ -73,6 +82,23 @@ class IncludeShops(DefaultOnToggle):
 class IncludeOutfits(DefaultOnToggle):
     """Outfits are sent to you as items (each one once). Purely cosmetic."""
     display_name = "Include Outfits"
+
+
+class FoundItemPopups(DefaultOnToggle):
+    """Show a short line at the bottom of the screen when one of your checks sends an item to another player
+    ("Found Hookshot for Alice")."""
+    display_name = "Found Item Popups"
+
+
+class PopupSounds(DefaultOnToggle):
+    """Play a game sound with item pop-ups and trap warnings."""
+    display_name = "Pop-up Sounds"
+
+
+class TrapLink(Toggle):
+    """TrapLink: every trap you receive is also sent to the other TrapLink players, and their traps can reach you
+    (matched to a similar Red Dead trap, or a random one)."""
+    display_name = "TrapLink"
 
 
 class TrapPercentage(Range):
@@ -147,6 +173,14 @@ class PosseTrapWeight(Range):
 
 
 
+class LightningStormTrapWeight(Range):
+    """Relative weight of the lightning storm trap (a storm rolls in, three lightning strikes land close to John)."""
+    display_name = "Lightning Storm Trap Weight"
+    range_start = 0
+    range_end = 100
+    default = 6
+
+
 class DeadEyeDrainTrapWeight(Range):
     """Relative weight of the Dead Eye drain trap (empties your Dead Eye meter). Keep this low to make it rare."""
     display_name = "Dead Eye Drain Trap Weight"
@@ -164,6 +198,7 @@ class RDROptions(PerGameCommonOptions):
     gang_kill_checks: GangKillChecks
     hat_tricks: HatTricks
     minigame_wins: MinigameWins
+    bounty_checks: BountyChecks
     include_shops: IncludeShops
     include_outfits: IncludeOutfits
     trap_percentage: TrapPercentage
@@ -176,6 +211,10 @@ class RDROptions(PerGameCommonOptions):
     out_of_bullets_trap_weight: OutOfBulletsTrapWeight
     posse_trap_weight: PosseTrapWeight
     herbert_moon_trap_weight: HerbertMoonTrapWeight
+    lightning_storm_trap_weight: LightningStormTrapWeight
+    found_item_popups: FoundItemPopups
+    popup_sounds: PopupSounds
+    trap_link: TrapLink
     death_link: DeathLink
 
 
@@ -183,10 +222,11 @@ class RDROptions(PerGameCommonOptions):
 rdr_option_groups = [
     OptionGroup("Goal and Weapons", [Goal, WeaponMode]),
     OptionGroup("Checks", [IncludeStrangerMissions, IncludeGangHideouts, GangKillChecks, HatTricks, MinigameWins,
-                           IncludeShops]),
+                           BountyChecks, IncludeShops]),
     OptionGroup("Items", [IncludeOutfits]),
     OptionGroup("Traps", [TrapPercentage, AnimalTrapWeight, GangTrapWeight, PosseTrapWeight, StampedeTrapWeight,
                           DrunkTrapWeight, SlowMotionTrapWeight, OutOfBulletsTrapWeight, HerbertMoonTrapWeight,
-                          DeadEyeDrainTrapWeight]),
-    OptionGroup("Multiplayer", [DeathLink]),
+                          LightningStormTrapWeight, DeadEyeDrainTrapWeight]),
+    OptionGroup("Pop-ups", [FoundItemPopups, PopupSounds]),
+    OptionGroup("Multiplayer", [DeathLink, TrapLink]),
 ]

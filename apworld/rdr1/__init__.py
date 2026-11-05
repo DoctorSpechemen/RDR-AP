@@ -4,7 +4,7 @@ from BaseClasses import ItemClassification, Region, Tutorial
 from Options import OptionError
 from worlds.AutoWorld import WebWorld, World
 
-from .Data import (FILLER_WEIGHTS, FILLER_DEFAULT_WEIGHT, OUTFITS, ANIMAL_TRAPS, AREA_GATES, CLUSTER_NAMES, CLUSTERS, DEAD_EYE_DRAIN_TRAP, DEAD_EYE_ITEM,
+from .Data import (ALL_FILLERS, FILLER_WEIGHTS, FILLER_DEFAULT_WEIGHT, OUTFITS, ANIMAL_TRAPS, AREA_GATES, CLUSTER_NAMES, CLUSTERS, DEAD_EYE_DRAIN_TRAP, DEAD_EYE_ITEM,
                    DEAD_EYE_LEVELS, DEFAULT_START_WEAPON, DRUNK_TRAP, EXTRA_TRAPS, FILLER_ITEMS, FINAL_CLUSTER, STORY_LOCKED_OUTFITS, GAME_NAME, GANG_TRAP,
                    GUNS,
                    RANDOM_ANIMAL_TRAP, WEAPONS)
@@ -87,6 +87,8 @@ class RDRWorld(World):
             return data.index <= o.hat_tricks.value
         if cat == "minigame":
             return data.index <= o.minigame_wins.value
+        if cat == "bounty":
+            return data.index <= o.bounty_checks.value
         if cat == "shop":
             return bool(o.include_shops)
         return False
@@ -146,8 +148,8 @@ class RDRWorld(World):
         return RDRItem(name, data.classification, data.code, self.player)
 
     def get_filler_item_name(self) -> str:
-        weights = [FILLER_WEIGHTS.get(name, FILLER_DEFAULT_WEIGHT) for name in FILLER_ITEMS]
-        return self.random.choices(FILLER_ITEMS, weights)[0]
+        weights = [FILLER_WEIGHTS.get(name, FILLER_DEFAULT_WEIGHT) for name in ALL_FILLERS]
+        return self.random.choices(ALL_FILLERS, weights)[0]
 
     def _random_trap(self) -> str:
         o = self.options
@@ -157,7 +159,8 @@ class RDRWorld(World):
                                                                 o.dead_eye_drain_trap_weight.value, o.drunk_trap_weight.value,
                                                                 o.slowmo_trap_weight.value, o.stampede_trap_weight.value,
                                                                 o.out_of_bullets_trap_weight.value, o.posse_trap_weight.value,
-                                                                o.herbert_moon_trap_weight.value]
+                                                                o.herbert_moon_trap_weight.value,
+                                                                o.lightning_storm_trap_weight.value]
         if sum(weights) == 0:
             return self.get_filler_item_name()
         return self.random.choices(names, weights)[0]
@@ -202,4 +205,15 @@ class RDRWorld(World):
             "include_gang_hideouts": bool(o.include_gang_hideouts),
             "include_shops": bool(o.include_shops),
             "death_link": bool(o.death_link),
+            "trap_link": bool(o.trap_link),
+            "trap_weights": {RANDOM_ANIMAL_TRAP: o.animal_trap_weight.value, GANG_TRAP: o.gang_trap_weight.value,
+                             DEAD_EYE_DRAIN_TRAP: o.dead_eye_drain_trap_weight.value, DRUNK_TRAP: o.drunk_trap_weight.value,
+                             "Slow Motion Trap": o.slowmo_trap_weight.value, "Stampede Trap": o.stampede_trap_weight.value,
+                             "Out of Bullets Trap": o.out_of_bullets_trap_weight.value,
+                             "Lawmen Posse Trap": o.posse_trap_weight.value,
+                             "Herbert Moon Trap": o.herbert_moon_trap_weight.value,
+                             "Lightning Storm Trap": o.lightning_storm_trap_weight.value},
+            "found_item_popups": bool(o.found_item_popups),
+            "popup_sounds": bool(o.popup_sounds),
+            "bounty_checks": o.bounty_checks.value,
         }
