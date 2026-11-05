@@ -28,10 +28,10 @@ The setting has been reported to switch itself back on for some players, so chec
 2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. After you enter your slot name the client
    can hang for a second or two: that is normal, it is moving your save files into place. `/gamedir <path>` if the game is not in
    the default Steam folder.
-3. Start the game **after** connecting. The client swaps in this multiworld's own saves (start a NEW GAME the first time).
+3. Start the game **after** connecting. The client swaps in this multiworld's own saves.
 4. Play.
 
-  ** P.S. Upon finishing up a session, close the game first, then the client: your normal saves come back automatically.**
+**P.S. Upon finishing up a session, close the game first, then the client: your normal saves come back automatically.**
 
 ## Features
 - **Story missions play in the vanilla order.** Nothing is locked: every story mission you finish sends a check.
@@ -42,20 +42,15 @@ The setting has been reported to switch itself back on for some players, so chec
     - Vanilla Pickups, vanilla experience
 - **Outfits are items** (13, cosmetic). Not included: the US Marshal, US Army and Bureau uniforms (the game itself keeps
   them locked until late in the story) and Gentleman's Attire (every PC copy already has it).
-- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50 (cash, fame and honor are given again if
-  a checkpoint reload takes them back), and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
+- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50, and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
   Chewing Tobacco.
 - **Traps** (every trap shows one big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
   stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon, lightning
   (three strikes land close to you, keep moving), Dead Eye drain.
 - **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things.
 - **TrapLink**: traps are shared with other TrapLink games; their traps become the closest Red Dead trap.
-- **"Found X for Player"** line at the bottom of the screen when one of your checks sends an item to someone else, and
-  **sounds** with item pop-ups and trap warnings (both can be turned off in the YAML).
-- **F9 tally** in game: checks done / total per category, items received, cash received and every trap you survived.
 - A **PopTracker pack** (`RDR-AP_PopTracker.zip`) that tracks your checks and items automatically.
 - **A separate save per multiworld**, and the mod's own progress per multiworld (`rdr1_ap_seeds\<seed>\`).
-- Big centred pop-ups for every received item.
 
 ## What sends a check
 | Category | Check | Count |
@@ -92,14 +87,12 @@ The setting has been reported to switch itself back on for some players, so chec
 
 ## PopTracker
 Install [PopTracker](https://github.com/black-sliver/PopTracker/releases) 0.18 or newer, put `RDR-AP_PopTracker.zip` in its
-`packs` folder, open it and click the **AP** button to connect with your slot name. Checks that are not in your seed are
-hidden; grey checks need more Dead Eye in logic. Checks someone hinted for you are highlighted (needs a recent PopTracker).
+`packs` folder, open it and click the **AP** button to connect with your slot name.
 
 ## Known beta issues
 - Some story mission names are matched from script contents and may be wrong. Report the real title of any wrong check.
   ("A Gentle Drive with Friends" has no script of its own; the plugin sends it when a story mission it cannot identify ends.)
 - Herbert Moon's voice lines have not been heard in game yet (the trap shows its warning; the voice is being worked on).
-- Keep Rockstar cloud saves off while using the save swap (see "Turn off cloud saves").
 
 ## Credits
 This randomizer is built on the work of these projects and their authors. Thank you!
