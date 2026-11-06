@@ -3,7 +3,7 @@ from typing import Dict, NamedTuple
 from BaseClasses import Item, ItemClassification
 
 from .Data import (OUTFITS, ANIMAL_TRAPS, BASE_ID, CLUSTER_NAMES, DEAD_EYE_DRAIN_TRAP, DEAD_EYE_ITEM, FILLER_ITEMS, GAME_NAME, REMOVED_FILLERS, STORY_LOCKED_OUTFITS, CONSUMABLES,
-                   DRUNK_TRAP, EXTRA_TRAPS, GANG_TRAP, RANDOM_ANIMAL_TRAP, WEAPONS)
+                   DRUNK_TRAP, EXTRA_TRAPS, GANG_TRAP, LATE_TRAPS, RANDOM_ANIMAL_TRAP, WEAPONS)
 
 
 class RDRItem(Item):
@@ -38,6 +38,8 @@ def _build() -> Dict[str, ItemData]:
     code += 1   # id of the removed Ricketts joke trap
     for name in CONSUMABLES:
         add(name, ItemClassification.filler)
+    for name in LATE_TRAPS:
+        add(name, ItemClassification.trap)
     # Event item used for the goal; has no id.
     return table
 
@@ -47,7 +49,7 @@ item_name_to_id: Dict[str, int] = {name: data.code for name, data in item_table.
 
 item_name_groups = {
     "Weapons": set(WEAPONS),
-    "Traps": set(ANIMAL_TRAPS + [RANDOM_ANIMAL_TRAP, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP] + EXTRA_TRAPS),
+    "Traps": set(ANIMAL_TRAPS + [RANDOM_ANIMAL_TRAP, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP] + EXTRA_TRAPS + LATE_TRAPS),
     "Animal Ambush Traps": set(ANIMAL_TRAPS + [RANDOM_ANIMAL_TRAP]),
     "Filler": set(FILLER_ITEMS) | set(CONSUMABLES),
     "Consumables": set(CONSUMABLES),

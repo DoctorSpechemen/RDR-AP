@@ -12,84 +12,29 @@
 #include <vector>
 #include <filesystem>
 
-// RDR1 Archipelago plugin v6.3 BETA 2.2 (grew out of the feasibility test plugin; test commands are still available).
+// RDR-AP: RedHook plugin for the Red Dead Redemption (PC) Archipelago randomizer. v7.0, Beta 3.0.
 //
-// Keys (in game, once you have control of John):
-//   F7                 log player position
-//   End (or Numpad +)  stat snapshot (F8 is taken by RedHook's own console).
-//                      FIRST press: stand still ~2 seconds while the plugin calibrates, which finds stats that
-//                      change by themselves and ignores them. EVERY LATER press logs which of the remaining
-//                      stats changed since the previous press.
-//   F9                 Archipelago tally: checks done / total per category and items received (v6.2; the old F9-F11
-//                      test keys for weapons, ammo and animals were removed)
+// The plugin and the Archipelago client talk through plain files in the game folder:
+//   rdr1_ap_items.txt                    written by the client: seed, options, F9 tally lines, every received item
+//   rdr1_ap_seeds\<seed>\rdr1_ap_outbox.txt  written here: one found location per line (the client sends them)
+//   rdr1_ap_seeds\<seed>\rdr1_ap_progress.txt  this seed's counters (gang kills, hat tricks, wins, bounties, Dead Eye, ...)
+//   rdr1_ap_deaths.txt                   DeathLink out;  rdr1_ap_in.txt  commands in (DeathLink, "sendcheck", tests)
+//   rdr1_ap_hashmap.txt / rdr1_ap_scriptmap.txt  mission objective hashes and mission / stranger script names (data files)
+//   rdr1_ap_test.log                     the log (attach it to bug reports)
 //
-// NEW in v5.14: hat trick rule: player fired within 1.5 s + hat off + actor alive (and still alive 1.5 s later) = "HAT TRICK SUCCESS (prototype)"; dead = failed.
-// NEW in v5.14: five finger fillet win/loss from the objective hash (MINIGAME WIN / MINIGAME LOSS log lines).
-// NEW in v5.14: "shove [explosion name] [distance] [size]" (shove trap test, logs ragdoll and health lost).
-// NEW in v5.14: "drunk <seconds>" (drunk trap test, "drunk 0" ends it).
-// NEW in v5.14: "after <seconds> <command>" delays a command (the game closes menus when you alt-tab).
-// NEW in v5.14: stray-weapon watch only runs in normal play and ignores bulk inventory restores (a save load had marked all 21 guns).
-// NEW in v5.18: gang kill counter by faction id ('GANG KILL' lines, 'gangkills'), 'gangattack [gang] [count]' trap (models from eActorEnum).
-// NEW in v5.17: objective/cutscene start+end rows are always written to rdr1_ap_objectives.csv (play normally to build the final-objective table); 'journaldump'; journal probe lines; cutscene-end mission completion for table entries.
-// NEW in v5.15: 'shoprules 1|0|reset' (Armadillo gun/general store slots are locations: buying sends a check to rdr1_ap_outbox.txt, bought weapons are removed unless AP-given).
-// NEW in v5.13: 'shot' death category (non-lawman gun kill); 'shopprice <handle> <price>', 'shopwatch 1|0' (re-applies shopblock/shopprice, logs price/quantity changes), 'shopclear'; shopblock now rejects bad syntax.
-// NEW in v5.14: "removeweapon <name|number>" and "removeall [keep a, b]" take weapons away again (relock + forget).
-// v5.12: the in-game menu / log overlay (Insert, F5, F6, Home, arrows, Enter) was REMOVED; the console probe no longer
-//   logs when nothing was typed; 'ui console 1' became 'consolemirror 1'.
-// NEW in v5.11: stray-weapon reclaim (guns gained outside AP are marked and removed after the mission / 'reclaim'),
-//   shop probe ('shopscan <n>' with a shop menu open, 'shopblock <handle> <0|1>').
-// NEW in v5.10: every line of the input file is its own command; actor-scan timing ("perf:" lines); Dead Eye level re-applied
-//   every 5s and never during Dead Eye; watchers cutscene_playing / player_controllable_*; menu status shows safe=; commands
-//   'weaponlock <w> <0|1>' and 'equip <w>' (tests for gun-shop locking and for putting an owned weapon back on the wheel).
-// NEW in v5.9c: menu also opens with F5 (the other RedHook trainer uses F5 + Enter); console probe (type into the F8
-//   console, see 'console command:' lines), 'consolelog <text>' and 'ui console 1'.
-// NEW in v5.9: DeathLink cause detection + cowboy death messages ('player died: cause=...'), 'deathlink <text>' to receive,
-//   'deathmsg <category>' to preview.
-// NEW in v5.8: in-game menu (Insert) and log overlay (Home); Dead Eye progression 'deadeyelevel 0-4' (0 = Dead Eye disabled,
-//   -1 = game decides) which is re-applied every 2 seconds; 'ui <setting> <value>' to tune the overlay.
-// NEW in v5.7: objective-hash mission recorder (rdr1_ap_objectives.csv) and completion-detector prototype
-//   (rdr1_ap_missions.txt); commands: mission <name>, missionend passed|failed, loadmissions.
-// NEW in v5.6: 'quiet 1' / 'quiet 0' switches the plugin's own on-screen messages off/on (use it during mission tests so
-//   stat_message_showing only reacts to the game). The bow was removed from the weapon list (not in the base game).
-// NEW in v5.5: 'deadeye <multilock|paint|head|disable|infinite|locks|points|maxpoints|regen|timescale|status> <value>',
-//   'die' (kills the player, for DeathLink) and 'statfind <number>' (looks for a stat equal to a number on screen, e.g. cash).
-// NEW in v5.4: 'statdump' command (input file) lists stats that look like mission medals (values 1-4).
-// NEW in v5.3: is_mission_script watcher removed (it reports on THIS script, so it never changes); added
-//   stat_message_showing (the fame / mission-passed popup) as a possible mission-complete signal.
-// NEW in v5.2: locked weapons are unlocked before giving (fixes the Schofield etc.), throwables/knife/lasso/bow added to
-//   the weapon list, spawned animals are cleaned up (spawns started failing after ~60), failed spawns are logged,
-//   'player hit: ... by <actor>' lines show what actually hurt you, and 'animalclear' removes spawned animals.
-// NEW in v5.1: extra mission watchers (is_mission_script, last_printed_objective, last_note_objective, targeted entry progress).
-// NEW in v4.2: also logs "hat change: ..." whenever any actor gains or loses its hat (hat trick test).
+// What it does: applies received items (weapons, Progressive Dead Eye, outfits, cash, fame/honor, consumables, traps),
+// detects checks (story missions, stranger stories, gang kills, hideouts, hat tricks, minigame wins, bounties, shop
+// purchases), enforces the item rules (weapons and outfits that were not received are taken away, horse deeds and found
+// items are blocked in shops) and shows the pop-ups and the F9 tally.
 //
-// NEW in v4 - kill / hit watcher (always on):
-//   Every 0.2s all nearby actors are checked. The log gets
-//     "hit by player: ..."  whenever YOU damage an actor (with hit zone, hit flags, weapon, damage, faction...)
-//     "kill: by_player=1 ..." whenever an actor dies (by_player says whether you were the last attacker)
-//   Use it to test kills and hat tricks: do the thing, then drop a note file (see below) so I can match the
-//   log line to what you did.
+// Keys: F9 = Archipelago tally (30 s, F9 again closes it). F7 / End are test keys (position, stat snapshot).
 //
-// Files in the game folder (same folder as rdr1_ap_test.log):
-//   rdr1_ap_in.txt       drop a file containing one of: weapon / ammo / spawn  (acts like pressing F9/F10/F11),
-//                        NEW in v5 commands:
-//                          weapon <number|name>     give a specific weapon, e.g. "weapon schofield" or "weapon 2"
-//                          weapon swap <number|name> same, but if it still fails, REMOVE other held weapons of the same
-//                                                   category first (you lose them!) to test the slot theory
-//                          weapons                  log what you carry, lock state and category of every test weapon
-//                          spawn <animal> [recipe]  cougar bear grizzly wolf coyote boar bobcat snake rabbit, recipe 0-3
-//                          notoriety <number>       bounty probe: SET_PLAYER_CURRENT_NOTORIETY (try 0.5, 1, 10, 100...)
-//                          wantedfx <number|off>    bounty probe: wanted-poster screen effect level
-//                          paybounty <number>       bounty probe: SET_PAYING_BOUNTY (try last)
-//                        or any other text. Any other text is shown on screen AND written to the log with a
-//                        timestamp, so use it to label what you just did (for example "shot hat off").
-//                        More commands for that file (v4.1):
-//                          additem <Name> <count>   try INVENTORY::ADD_ITEM, e.g. "additem Cash 50". The log
-//                                                   records the return value; watch your money on screen.
-//                          statmax <n>              scan stat ids 0..n-1 (16..4096). Raises crash risk if the
-//                                                   game has fewer stats; the log shows the last id read.
-//                          statreset                throw away the stat baseline and recalibrate
-//   rdr1_ap_scripts.txt  OPTIONAL. One script name per line. Each is polled with
-//                        _IS_ANY_NAMED_SCRIPT_RUNNING and logged when it starts or stops.
+// Player-facing commands (rdr1_ap_in.txt, one per line): sendcheck <location>, tallycolor 0|1, verbose 0|1.
+// Everything else in the command list below (weapon, spawn, statdump, outfitgive, herbert, ...) is a test command from the
+// development builds; it is kept for testing and will be hidden in release builds (Beta 3 plan).
+//
+// History: v4-v5 were the feasibility test plugin (kill/hit watcher, stat scans, shop probes, mission recorder); v6 is the
+// randomizer. Decisions and test results are kept as "vX.Y:" comments next to the code they explain.
 
 static const char* LOG_PATH = "rdr1_ap_test.log";
 
@@ -133,10 +78,10 @@ static void CrumbTick(ULONGLONG _Now)
 	if (!g_crumbs.empty())
 	{
 		const Crumb& last = g_crumbs.back();
-		float dx = p.x - last.x, dy = p.y - last.y;
+		float dx = p.x - last.x, dz = p.z - last.z;                // v6.5: the game is Y-up: x and z are the ground plane
 
-		if (dx * dx + dy * dy < 9.0f) { return; }                  // stood still: nothing new
-		if (dx * dx + dy * dy > 250000.0f) { g_crumbs.clear(); }    // > 500 m in 2 s = a load or fast travel: forget the trail
+		if (dx * dx + dz * dz < 9.0f) { return; }                  // stood still: nothing new
+		if (dx * dx + dz * dz > 250000.0f) { g_crumbs.clear(); }    // > 500 m in 2 s = a load or fast travel: forget the trail
 	}
 
 	g_crumbs.push_back({ p.x, p.y, p.z });
@@ -145,15 +90,15 @@ static void CrumbTick(ULONGLONG _Now)
 }
 
 // Picks a ground spot _MinD.._MaxD metres from John; false if there is none (then the caller uses its own spot).
-static bool GroundSpot(const Vector3& _From, float _MinD, float _MaxD, float& _X, float& _Y, float& _Z)
+static bool GroundSpot(const Vector3& _From, float _MinD, float _MaxD, float& _X, float& _Y, float& _Z, float _MaxDy = 25.0f)
 {
 	std::vector<const Crumb*> good;
 
 	for (const Crumb& c : g_crumbs)
 	{
-		float dx = c.x - _From.x, dy = c.y - _From.y, d2 = dx * dx + dy * dy;
+		float dx = c.x - _From.x, dz = c.z - _From.z, d2 = dx * dx + dz * dz;   // v6.5: ground plane x/z, height y
 
-		if (d2 >= _MinD * _MinD && d2 <= _MaxD * _MaxD && std::fabs(c.z - _From.z) < 25.0f) { good.push_back(&c); }
+		if (d2 >= _MinD * _MinD && d2 <= _MaxD * _MaxD && std::fabs(c.y - _From.y) < _MaxDy) { good.push_back(&c); }
 	}
 
 	if (good.empty()) { return false; }
@@ -163,6 +108,16 @@ static bool GroundSpot(const Vector3& _From, float _MinD, float _MaxD, float& _X
 	_X = c->x; _Y = c->y; _Z = c->z;
 
 	return true;
+}
+
+// v6.5: positions are (x, height, z): the game is Y-up (its scripts raise .y before a ground test). Before v6.5 every spawn
+// offset went into x and HEIGHT, so trap spawns lay on a line and some floated (tester: "one of the enemies was way up in the
+// sky"). Around() gives a spot _Distance metres away on the ground plane, at John's height.
+static void Around(const Vector3& _From, float _Angle, float _Distance, float& _X, float& _Y, float& _Z)
+{
+	_X = _From.x + std::cos(_Angle) * _Distance;
+	_Y = _From.y;
+	_Z = _From.z + std::sin(_Angle) * _Distance;
 }
 
 static const int MAX_ACTORS = 4096;
@@ -218,6 +173,10 @@ static std::string g_lastMissionScript;   // script of the story mission in prog
 static bool g_apMode = false;            // v5.21: true once the client has written an items file for a seed ("apmode 1" for tests)
 static int g_gangKillChecks = 10;    // v6.3: from the YAML via the client ("option gang_kill_checks N"): checks per gang
 static int g_hatTrickChecks = 15;    // v6.3: "option hat_tricks N"
+static int g_minigameWins = 5;       // v6.4: "option minigame_wins N": win checks per minigame in this seed
+static int g_bountyChecks = 20;      // v6.4: "option bounty_checks N"
+static bool g_fameRanks = false;     // v7.0: "option fame_ranks on|off"
+static int g_honorRanks = 0;         // v7.0: "option honor_ranks off|good|bad" -> 0 / 1 / 2
 static bool g_vanillaWeapons = false;    // v5.21: option weapon_mode vanilla: weapons are not items, nothing is taken away
 static ULONGLONG g_syncQuietUntil = 0;   // v5.20: the weapon watch ignores changes until this time (set after a sync)
 static std::set<int> g_pendingReclaim;
@@ -254,14 +213,14 @@ static void Log(const std::string& _Line)
 // "quiet 1" in the input file turns all on-screen messages off (they trip stat_message_showing, which we want clean).
 static bool g_quiet = false;
 
-static void Say(const std::string& _Text)
+static void Say(const std::string& _Text, float _Seconds = 6.0f)
 {
 	if (g_quiet)
 	{
 		return;
 	}
 
-	HUD::PRINT_HELP_B(_Text.c_str(), 6.0f, true, 1, 0, 0, 0, 0);
+	HUD::PRINT_HELP_B(_Text.c_str(), _Seconds, true, 1, 0, 0, 0, 0);
 }
 
 // v5.21 alpha: Archipelago styled messages. "uitags 0" strips the colour tags if the game ever prints them literally.
@@ -272,14 +231,15 @@ static std::string Tag(const char* _Color, const std::string& _Text)
 	return g_uiTags ? std::string("<") + _Color + ">" + _Text + "</" + _Color + ">" : _Text;
 }
 
-static void ApSay(const std::string& _Body)
+// v6.4: player-facing lines stay 4 s (was 6; test command output keeps 6), progress counters 3 s
+static void ApSay(const std::string& _Body, float _Seconds = 4.0f)
 {
 	// v5.22: one plain line. The tagged header + new lines only ever showed "ARCHIPELAGO" in game.
 	std::string line = _Body;
 
 	for (size_t pos = line.find('\n'); pos != std::string::npos; pos = line.find('\n', pos)) { line.replace(pos, 1, " - "); }
 
-	Say(line);
+	Say(line, _Seconds);
 }
 
 // Big centred title (the game's own "mission" style text) plus a help line, used for traps.
@@ -1263,12 +1223,12 @@ static const AnimalEntry ANIMALS[] =
 	{ "cougar",  "Cougar",       ACTOR_ANIMAL_NOR_Cougar,        SPECIES_COUGAR, true,  3 },
 	{ "bear",    "Black Bear",   ACTOR_ANIMAL_NOR_Bear,          SPECIES_BEAR,   true,  2 },
 	{ "grizzly", "Grizzly Bear", ACTOR_ANIMAL_NOR_GrizzlyBear,   SPECIES_BEAR,   true,  2 },
-	{ "wolf",    "Wolf",         ACTOR_ANIMAL_NOR_Wolf,          SPECIES_WOLF,   true,  3 },
-	{ "coyote",  "Coyote",       ACTOR_ANIMAL_Coyote,            SPECIES_COYOTE, true,  3 },
-	{ "boar",    "Wild Boar",    ACTOR_ANIMAL_NOR_WildBoar,      SPECIES_BOAR,   true,  2 },
+	{ "wolf",    "Wolf",         ACTOR_ANIMAL_NOR_Wolf,          SPECIES_WOLF,   true,  0 },   // v6.5c: weight 0 = never picked at
+	{ "coyote",  "Coyote",       ACTOR_ANIMAL_Coyote,            SPECIES_COYOTE, true,  0 },   // random (tester), still spawnable by
+	{ "boar",    "Wild Boar",    ACTOR_ANIMAL_NOR_WildBoar,      SPECIES_BOAR,   true,  0 },   // name ("spawn wolf")
 	{ "bobcat",  "Bobcat",       ACTOR_ANIMAL_MEX_BobCat,        SPECIES_BOBCAT, true,  2 },
 	{ "snake",   "Snake",        ACTOR_ANIMAL_Snake,             SPECIES_SNAKE,  true,  1 },
-	{ "rabbit",  "Rabbit",       ACTOR_ANIMAL_Rabbit02,          SPECIES_RABBIT, false, 1 },
+	{ "rabbit",  "Rabbit",       ACTOR_ANIMAL_Rabbit02,          SPECIES_RABBIT, false, 1 },   // the rare joke ambush
 };
 
 static const int ANIMAL_COUNT = (int)(sizeof(ANIMALS) / sizeof(ANIMALS[0]));
@@ -1386,9 +1346,9 @@ static void SpawnAnimal(int _AnimalIndex, int _Recipe)
 	// Random direction around the player.
 	float angle = (float)(std::rand() % 628) / 100.0f;
 
-	float x = position.x + std::cos(angle) * COUGAR_SPAWN_DISTANCE;
-	float y = position.y + std::sin(angle) * COUGAR_SPAWN_DISTANCE;
-	float z = position.z;
+	float x, y, z;
+
+	Around(position, angle, COUGAR_SPAWN_DISTANCE, x, y, z);
 
 	GroundSpot(position, COUGAR_SPAWN_DISTANCE - 4.0f, COUGAR_SPAWN_DISTANCE + 12.0f, x, y, z);   // v6.2: real ground if we have it
 
@@ -1396,7 +1356,7 @@ static void SpawnAnimal(int _AnimalIndex, int _Recipe)
 
 	std::string objectName = "ap_trap_animal_" + std::to_string(g_spawnCounter++);
 
-	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), animal.model, Vector2(x, y), z + 1.0f, Vector2(), 0.0f);
+	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), animal.model, Vector2(x, y + 1.0f), z, Vector2(), 0.0f);
 
 	if ((int)actor <= 0)
 	{
@@ -1532,24 +1492,24 @@ static void CrimeProbe(const std::string& _Args)
 
 	float angle = (float)(std::rand() % 628) / 100.0f;
 	Actor victim = 0, witness = 0;
-	Vector3 victimPos = position;
 
 	for (int n = 0; n < 2; n++)
 	{
 		float a = angle + 0.5f * (float)n;
 		float d = 10.0f + 2.0f * (float)n;
-		float x = position.x + std::cos(a) * d;
-		float y = position.y + std::sin(a) * d;
+		float x, y, z;
+
+		Around(position, a, d, x, y, z);
 
 		std::string objectName = "ap_crime_" + std::to_string(g_spawnCounter++);
 
-		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y), position.z + 1.0f, Vector2(), 0.0f);
+		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y + 1.0f), z, Vector2(), 0.0f);
 
 		if ((int)actor <= 0) { Log("crimeprobe: spawn failed for actor " + std::to_string(n)); continue; }
 
 		g_spawned.push_back({ actor, GetTickCount64() });
 
-		if (n == 0) { victim = actor; victimPos.x = x; victimPos.y = y; } else { witness = actor; }
+		if (n == 0) { victim = actor; } else { witness = actor; }
 	}
 
 	if ((int)victim <= 0) { Log("crimeprobe: no victim"); return; }
@@ -1604,7 +1564,9 @@ static void GangAttack(const std::string& _Args)
 	if (count < 1) { count = 1; }
 	if (count > 5) { count = 5; }
 
-	int gang = text.empty() ? std::rand() % GANG_SPAWN_COUNT : -1;
+	// v6.5h: a random gang is one of the first seven (walton .. criminal). Lawmen have their own trap (posse), and the Undead
+	// Nightmare zombies were in the random pick too (tester got zombies from a gang attack). "gangattack zombie" still works.
+	int gang = text.empty() ? std::rand() % 7 : -1;
 
 	for (int i = 0; i < GANG_SPAWN_COUNT && gang < 0; i++)
 	{
@@ -1649,15 +1611,15 @@ static void GangAttack(const std::string& _Args)
 		float angle = (float)(std::rand() % 628) / 100.0f;
 		float distance = g_gangDistanceBase + (float)(std::rand() % 5);
 
-		float x = position.x + std::cos(angle) * distance;
-		float y = position.y + std::sin(angle) * distance;
-		float z = position.z;
+		float x, y, z;
+
+		Around(position, angle, distance, x, y, z);
 
 		GroundSpot(position, distance - 6.0f, distance + 25.0f, x, y, z);   // v6.2: a spot John stood on, so nobody floats
 
 		std::string objectName = "ap_trap_gang_" + std::to_string(g_spawnCounter++);
 
-		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y), z + 1.0f, Vector2(), 0.0f);
+		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y + 1.0f), z, Vector2(), 0.0f);
 
 		if ((int)actor <= 0)
 		{
@@ -2110,11 +2072,12 @@ static void CountGangKill(Actor _Actor, bool _ByPlayer)
 			// kill checks left for the gang (no "3/5" lines after the last one).
 			if (g_gangKills[i] % 5 != 0 && g_gangKills[i] < 5 * g_gangKillChecks)
 			{
-				ApSay(std::string(GANGS[i].name) + ": " + std::to_string(g_gangKills[i] % 5) + "/5");
+				ApSay(std::string(GANGS[i].name) + ": " + std::to_string(g_gangKills[i] % 5) + "/5", 3.0f);
 			}
 
-			// v5.20k: a check every 5 kills, up to 50 (location "<Gang>: <n> Kills").
-			if (g_gangKills[i] % 5 == 0 && g_gangKills[i] <= 50)
+			// v5.20k: a check every 5 kills, up to 50 (location "<Gang>: <n> Kills"). v6.4: only up to this seed's limit (the
+			// server ignored the rest, but they cluttered the log and the client).
+			if (g_gangKills[i] % 5 == 0 && g_gangKills[i] <= (std::min)(50, 5 * g_gangKillChecks))
 			{
 				SendCheck(std::string(GANGS[i].name) + ": " + std::to_string(g_gangKills[i]) + " Kills");
 			}
@@ -3273,14 +3236,14 @@ static void SendNextWin(const std::string& _Game)
 {
 	LoadSentChecks();
 
-	for (int n = 1; n <= 5; n++)
+	for (int n = 1; n <= (std::min)(5, g_minigameWins); n++)
 	{
 		std::string loc = _Game + ": Win " + std::to_string(n);
 
 		if (!g_sentChecks.count(loc)) { Log("MINIGAME WIN: " + _Game + " -> " + loc); SendCheck(loc); return; }
 	}
 
-	Log("MINIGAME WIN: " + _Game + " (all 5 win checks already sent)");
+	Log("MINIGAME WIN: " + _Game + " (all " + std::to_string((std::min)(5, g_minigameWins)) + " win checks already sent)");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -3529,7 +3492,7 @@ static void BrawlCommand(const std::string& _Args)
 
 	std::string objectName = "ap_trap_brawl_" + std::to_string(g_spawnCounter++);
 
-	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(position.x + std::cos(angle) * 3.0f, position.y + std::sin(angle) * 3.0f), position.z + 1.0f, Vector2(), 0.0f);
+	Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(position.x + std::cos(angle) * 3.0f, position.y + 1.0f), position.z + std::sin(angle) * 3.0f, Vector2(), 0.0f);
 
 	if ((int)actor <= 0)
 	{
@@ -3659,6 +3622,201 @@ static void LightningCommand()
 	Log("lightning: 3 strikes queued");
 }
 
+// ---------------------------------------------------------------------------------------------
+// v6.5: Duel trap ("A Challenger Approaches..."). A gunman spawns and the game's own dueling minigame starts, launched the way
+// the game's random duel challenges and the poker cheat duel launch it:
+//   LAUNCH_NEW_SCRIPT_WITH_ARGS("content/Mini_Games/Dueling/Dueling", args, 32, 0)
+// with 32 four-byte argument slots (from poker01.c / beat_duel_rude.c; offsets there are in bytes):
+//   [0] player actor   [2] opponent actor   [4..6] player position   [7..9] opponent position   [10] "Duel_StayOut" volume
+//   [17] 100 (the poker duel; random challenges use 50 + 15 per duel won, up to 150)   [20] difficulty 0..2   [21] -2 (none)
+// The minigame counts a won duel in stat 451 itself, so the minigame tracker sends the next "Duels: Win N". Losing kills John,
+// so DeathLink goes out like any other death (user choice). Experimental: "duelprobe" runs it without the trap warning, and every
+// step is logged.
+// ---------------------------------------------------------------------------------------------
+static const char* DUEL_SCRIPT = "content/Mini_Games/Dueling/Dueling";
+static int g_duelState = 0;            // 0 idle, 1 waiting for the script to stream, 2 duel running
+static Actor g_duelOpponent = 0;
+static int g_duelScript = 0;
+static ULONGLONG g_duelStateAt = 0;
+
+static void DuelCleanup(const std::string& _Why)
+{
+	Log("duel: " + _Why);
+
+	g_duelState = 0;
+	g_duelScript = 0;
+
+	if (g_duelOpponent != 0) { g_spawned.push_back({ g_duelOpponent, GetTickCount64() }); }   // removed later with the other spawns
+
+	g_duelOpponent = 0;
+
+	AUDIO::AUDIO_MUSIC_RELEASE_CONTROL(0, 0);   // back to the game's own music
+}
+
+// v6.5d: duel music. Setting a mood alone played nothing (test 2026-11-05): the game's duel challenges first force one of the
+// region songs (FTR_ = New Austin, MEX_ = Mexico, NRT_ = West Elizabeth) and then switch its mood. Same here.
+static void DuelMusic()
+{
+	static const char* SONGS[] = { "FTR_SONG_02", "FTR_SONG_03", "FTR_SONG_07", "MEX_SONG_01", "MEX_SONG_03", "NRT_SONG_04" };
+
+	AUDIO::AUDIO_MUSIC_FORCE_TRACK(SONGS[std::rand() % 6], "SUSPENSE_LOW", 0, 500, -1, -1.0f, 0);
+	AUDIO::AUDIO_MUSIC_SET_MOOD("SUSPENSE_LOW", 0, -1, -1);
+}
+
+// v6.5d: on foot = not on a horse, not on a wagon or other vehicle (test: a duel started on a wagon and "freaked out")
+static bool OnFoot()
+{
+	Actor player = ACTOR::GET_PLAYER_ACTOR(-1);
+
+	return !RIDING::IS_ACTOR_RIDING(player) && !RIDING::IS_ACTOR_MOUNTED(player) && !VEHICLES::IS_ACTOR_RIDING_VEHICLE(player);
+}
+
+static bool g_duelWaitFoot = false;   // the warning was shown, but John got onto a horse or wagon before the duel: wait
+
+static void DuelCommand()
+{
+	if (g_duelState != 0) { Log("duel: already running"); return; }
+
+	if (!OnFoot())
+	{
+		if (!g_duelWaitFoot) { Log("duel: John is riding, waiting until he is on foot"); }
+
+		g_duelWaitFoot = true;
+		return;
+	}
+
+	g_duelWaitFoot = false;
+
+	Actor player = ACTOR::GET_PLAYER_ACTOR(-1);
+	Vector3 position = ACTOR::GET_POSITION(player);
+
+	// v6.5c: a gunslinger, not a gang member (test: a town guard shot the gang challenger before the duel started)
+	static const ActorModel GUNSLINGERS[] = { ACTOR_CAUCASIAN_MALE_Gunslinger04, ACTOR_CAUCASIAN_MALE_Gunslinger05,
+		ACTOR_CAUCASIAN_MALE_Gunslinger06, ACTOR_CAUCASIAN_MALE_Gunslinger07, ACTOR_CAUCASIAN_MALE_Gunslinger08,
+		ACTOR_CAUCASIAN_MALE_Gunslinger09, ACTOR_CAUCASIAN_MALE_Gunslinger10, ACTOR_HISPANIC_MALE_Gunslinger02,
+		ACTOR_HISPANIC_MALE_Gunslinger03, ACTOR_HISPANIC_MALE_Gunslinger04, ACTOR_HISPANIC_MALE_Gunslinger05 };
+	ActorModel model = GUNSLINGERS[std::rand() % (sizeof(GUNSLINGERS) / sizeof(GUNSLINGERS[0]))];
+
+	STREAM::STREAMING_REQUEST_ACTOR(model, true, true);
+
+	ULONGLONG start = GetTickCount64();
+
+	while (!STREAM::STREAMING_IS_ACTOR_LOADED(model, 0) && GetTickCount64() < start + 3000) { ScriptWait(0); }
+
+	if (!STREAM::STREAMING_IS_ACTOR_LOADED(model, 0)) { Log("duel: model did not load"); return; }
+
+	// about 12 m away on the ground (a spot John stood on if there is one)
+	float x, y, z;
+
+	Around(position, (float)(std::rand() % 628) / 100.0f, 12.0f, x, y, z);
+	GroundSpot(position, 9.0f, 16.0f, x, y, z, 2.5f);   // v6.5c: level with John (test: one spawned off a cliff)
+
+	Layout layout = OBJECT::FIND_NAMED_LAYOUT("PlayerLayout");
+	std::string objectName = "ap_trap_duel_" + std::to_string(g_spawnCounter++);
+
+	g_duelOpponent = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(x, y + 1.0f), z, Vector2(), 0.0f);
+
+	if ((int)g_duelOpponent <= 0) { g_duelOpponent = 0; Log("duel: spawn FAILED"); return; }
+
+	INVENTORY::GIVE_WEAPON_TO_ACTOR(g_duelOpponent, WEAPON_REVOLVER_Cattleman, 1, false, false);
+
+	Invoke<0x11E57A92, void>(DUEL_SCRIPT);   // SCRIPT::STREAMING_REQUEST_SCRIPT
+
+	g_duelState = 1;
+	g_duelStateAt = GetTickCount64();
+
+	DuelMusic();
+
+	Log("duel: challenger model " + std::to_string((int)model) + " actor " + std::to_string((int)g_duelOpponent)
+		+ ", requesting the dueling script");
+}
+
+static void DuelTick(ULONGLONG _Now)
+{
+	if (g_duelWaitFoot && g_duelState == 0 && OnFoot() && SafeToDeliver()) { DuelCommand(); return; }
+
+	if (g_duelState == 0) { return; }
+
+	Actor player = ACTOR::GET_PLAYER_ACTOR(-1);
+
+	if (g_duelState == 1)
+	{
+		if (!HEALTH::IS_ACTOR_ALIVE(g_duelOpponent)) { DuelCleanup("challenger died before the duel"); return; }
+
+		// v6.5b: the game's scripts launch the duel without requesting it first (test 1: STREAMING_IS_SCRIPT_LOADED never said
+		// yes). Every 0.7 s one launch attempt, cycling through path spellings, each logged; up to 12 attempts.
+		static const char* PATHS[] = { "content/Mini_Games/Dueling/Dueling", "$/content/Mini_Games/Dueling/Dueling",
+			"content/mini_games/dueling/dueling", "Dueling" };
+		static ULONGLONG s_nextTry = 0;
+		static int s_tries = 0;
+
+		if (_Now < s_nextTry) { return; }
+
+		if (_Now < g_duelStateAt + 100) { s_tries = 0; }   // a new duel
+
+		if (s_tries >= 12) { s_tries = 0; DuelCleanup("the dueling script would not launch (12 tries, see above)"); return; }
+
+		const char* path = PATHS[s_tries % 4];
+
+		s_tries++;
+		s_nextTry = _Now + 700;
+
+		Invoke<0x11E57A92, void>(path);   // SCRIPT::STREAMING_REQUEST_SCRIPT (harmless if not needed)
+
+		int loaded = Invoke<0xB5B4AEAD, int>(path);   // SCRIPT::STREAMING_IS_SCRIPT_LOADED
+
+		Vector3 me = ACTOR::GET_POSITION(player);
+		Vector3 him = ACTOR::GET_POSITION(g_duelOpponent);
+
+		// heading from the challenger towards John, degrees about the up axis (only orients the stay-out box)
+		float heading = std::atan2(me.x - him.x, me.z - him.z) * 57.29578f;
+
+		static Layout s_duelLayout = 0;
+
+		if (s_duelLayout == 0) { s_duelLayout = OBJECT::CREATE_LAYOUT("ap_duel_layout"); }
+
+		static int s_volume = 0;
+
+		if (s_volume == 0) { s_volume = Invoke<0xA17311E4, int>(s_duelLayout, "Duel_StayOut", 2, him.x, him.y, him.z, 0.0f, heading, 0.0f, 10.0f, 10.0f, 15.0f); }
+
+		int duelWins = (int)StatGet(451);
+		int args[32] = { 0 };
+
+		args[0] = (int)player;
+		args[2] = (int)g_duelOpponent;
+		std::memcpy(&args[4], &me, sizeof(float) * 3);
+		std::memcpy(&args[7], &him, sizeof(float) * 3);
+		args[10] = s_volume;
+		args[17] = (std::min)(150, 50 + 15 * duelWins);
+		args[20] = duelWins <= 1 ? 0 : duelWins <= 3 ? 1 : 2;
+		args[21] = -2;
+
+		g_duelScript = Invoke<0xA602F586, int>(path, args, 32, 0);   // SCRIPT::LAUNCH_NEW_SCRIPT_WITH_ARGS
+
+		bool valid = g_duelScript != 0 && CORE::IS_SCRIPT_VALID(g_duelScript);
+
+		Log("duel: try " + std::to_string(s_tries) + " '" + path + "' loaded=" + std::to_string(loaded) + " -> script id "
+			+ std::to_string(g_duelScript) + (valid ? " RUNNING" : " not valid") + " (layout " + std::to_string((int)s_duelLayout)
+			+ ", volume " + std::to_string(s_volume) + ", wins " + std::to_string(duelWins) + ", difficulty " + std::to_string(args[20]) + ")");
+
+		if (!valid) { return; }
+
+		s_tries = 0;
+		s_volume = 0;   // the next duel gets its own box
+		g_duelState = 2;
+		g_duelStateAt = _Now;
+		return;
+	}
+
+	if (g_duelState == 2 && !CORE::IS_SCRIPT_VALID(g_duelScript))
+	{
+		int result = DECORATOR::DECOR_GET_INT((Object)player, "iDuelResult");
+
+		DuelCleanup("finished after " + std::to_string((_Now - g_duelStateAt) / 1000) + " s, iDuelResult " + std::to_string(result)
+			+ ", John " + (HEALTH::IS_ACTOR_ALIVE(player) ? "alive" : "dead") + ", duels won stat " + std::to_string((int)StatGet(451)));
+	}
+}
+
 static void LightningTick(ULONGLONG _Now)
 {
 	while (!g_strikes.empty() && _Now >= g_strikes.front())
@@ -3674,9 +3832,7 @@ static void LightningTick(ULONGLONG _Now)
 		float d = 5.0f + (float)(std::rand() % 8);
 
 		Vector3 blast;
-		blast.x = p.x + std::cos(a) * d;
-		blast.y = p.y + std::sin(a) * d;
-		blast.z = p.z;
+		Around(p, a, d, blast.x, blast.y, blast.z);
 
 		Vector3 sphere;
 		sphere.x = 2.5f; sphere.y = 2.5f; sphere.z = 2.5f;
@@ -3710,9 +3866,7 @@ static void StampedeCommand(const std::string& _Args)
 
 	if (kind.empty())
 	{
-		static const char* BIG[] = { "buffalo", "elk", "bighorn" };   // deer and boar removed from the random pick
-
-		kind = BIG[std::rand() % 3];
+		kind = "buffalo";   // v6.5d: the stampede is always buffalo (tester); "stampede elk" etc. still work as test commands
 	}
 
 	ActorModel model = ACTOR_ANIMAL_Sheep;
@@ -3750,14 +3904,31 @@ static void StampedeCommand(const std::string& _Args)
 
 	int made = 0;
 
+	// v6.5c: the herd starts together 35-45 m away on one side and charges at John (tester: spawn further away, aimed at the
+	// player; before it appeared all around him at 4-7 m). The start is a spot John walked over if there is one that far.
+	float angle = (float)(std::rand() % 628) / 100.0f;
+	float cx, cy, cz;
+
+	Around(position, angle, 40.0f, cx, cy, cz);
+	GroundSpot(position, 32.0f, 50.0f, cx, cy, cz, 12.0f);
+
+	float hx = position.x - cx, hz = position.z - cz, len = std::sqrt(hx * hx + hz * hz);
+
+	if (len < 1.0f) { len = 1.0f; }
+
+	hx /= len; hz /= len;   // the direction of the charge (towards John)
+
 	for (int i = 0; i < count; i++)
 	{
-		float angle = (float)(std::rand() % 628) / 100.0f;
-		float distance = 4.0f + (float)(std::rand() % 30) / 10.0f;   // v5.20k: tighter, 4 to 7 m around John
+		float side = ((float)(std::rand() % 1600) / 100.0f) - 8.0f;   // across the charge, -8..8 m
+		float back = ((float)(std::rand() % 800) / 100.0f);           // along it, 0..8 m behind the front
+
+		float ax = cx + (-hz) * side - hx * back;
+		float az = cz + hx * side - hz * back;
 
 		std::string objectName = "ap_trap_herd_" + std::to_string(g_spawnCounter++);
 
-		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(position.x + std::cos(angle) * distance, position.y + std::sin(angle) * distance), position.z + 1.0f, Vector2(), 0.0f);
+		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, objectName.c_str(), model, Vector2(ax, cy + 1.0f), az, Vector2(), 0.0f);
 
 		if ((int)actor <= 0) { continue; }
 
@@ -3773,7 +3944,8 @@ static void StampedeCommand(const std::string& _Args)
 
 	g_herdDespawnAt = GetTickCount64() + 45000;
 
-	Log("stampede: " + kind + " x" + std::to_string(made) + " of " + std::to_string(count) + " spawned and following John");
+	Log("stampede: " + kind + " x" + std::to_string(made) + " of " + std::to_string(count) + " spawned " + std::to_string((int)len)
+		+ " m away, charging at John");
 
 	// v6.2: no second message here, the trap warning already said it (tester: every trap showed two)
 }
@@ -3879,7 +4051,7 @@ static void OutOfBulletsRestoreTick(ULONGLONG _Now)
 
 	Log(text);
 
-	ApBig("Bullets Recovered", "You recovered some of your bullets...");
+	ApBig("You've recovered some of your bullets...", "");
 }
 
 // v5.20k "modelprobe <from> <to>": spawns each actor model id briefly, logs its species and removes it again. Used to find which
@@ -3916,7 +4088,7 @@ static void ModelProbeCommand(const std::string& _Args)
 
 		std::string name = "ap_probe_" + std::to_string(g_spawnCounter++);
 
-		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, name.c_str(), model, Vector2(position.x + 25.0f, position.y), position.z + 1.0f, Vector2(), 0.0f);
+		Actor actor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, name.c_str(), model, Vector2(position.x + 25.0f, position.y + 1.0f), position.z, Vector2(), 0.0f);
 
 		if ((int)actor <= 0) { Log("modelprobe " + std::to_string(id) + ": spawn failed"); continue; }
 
@@ -3931,6 +4103,54 @@ static void ModelProbeCommand(const std::string& _Args)
 }
 
 static ULONGLONG g_passoutUntil = 0;
+
+static void LandonLockTick(ULONGLONG _Now);
+
+// v7.0: fame and honor rank checks. Reaching a title sends "Fame Rank: <title>" / "Honor Rank: <title>". Cut-offs: Greenhorn 1000,
+// Buckaroo 2000, Mercenary 4000, Honest Joe 1500, Peacemaker 2500 seen in play (2026-11-05); the rest follow the same pattern
+// (fame doubles, capped at 10000 by the game; honor steps 1000 from 1500, capped at +-5000). A reload can't send one twice.
+static void RankTick()
+{
+	if (!g_apMode || (!g_fameRanks && g_honorRanks == 0)) { return; }
+
+	struct Rank { const char* name; float cut; };
+	static const Rank FAME[] = { { "Greenhorn", 1000 }, { "Buckaroo", 2000 }, { "Mercenary", 4000 }, { "Gunslinger", 8000 }, { "Legend", 10000 } };
+	static const Rank GOOD[] = { { "Honest Joe", 1500 }, { "Peacemaker", 2500 }, { "Hero", 3500 } };
+	static const Rank BAD[] = { { "Rustler", -1500 }, { "Road Agent", -2500 }, { "Desperado", -3500 } };
+
+	float fame = StatGet(3), honor = StatGet(1);
+
+	LoadSentChecks();
+
+	if (g_fameRanks)
+	{
+		for (const Rank& r : FAME)
+		{
+			std::string loc = std::string("Fame Rank: ") + r.name;
+
+			if (fame >= r.cut && !g_sentChecks.count(loc)) { Log("RANK: fame " + std::to_string((int)fame) + " -> " + loc); SendCheck(loc); }
+		}
+	}
+
+	if (g_honorRanks == 1)
+	{
+		for (const Rank& r : GOOD)
+		{
+			std::string loc = std::string("Honor Rank: ") + r.name;
+
+			if (honor >= r.cut && !g_sentChecks.count(loc)) { Log("RANK: honor " + std::to_string((int)honor) + " -> " + loc); SendCheck(loc); }
+		}
+	}
+	else if (g_honorRanks == 2)
+	{
+		for (const Rank& r : BAD)
+		{
+			std::string loc = std::string("Honor Rank: ") + r.name;
+
+			if (honor <= r.cut && !g_sentChecks.count(loc)) { Log("RANK: honor " + std::to_string((int)honor) + " -> " + loc); SendCheck(loc); }
+		}
+	}
+}
 
 static void MoreTrapsTick(ULONGLONG _Now)
 {
@@ -3982,6 +4202,9 @@ static void MoreTrapsTick(ULONGLONG _Now)
 	}
 
 	LightningTick(_Now);
+	DuelTick(_Now);
+	LandonLockTick(_Now);
+	RankTick();
 
 	if (g_stormUntil != 0 && _Now >= g_stormUntil)
 	{
@@ -4122,6 +4345,8 @@ static const StatCheck MINIGAME_STATS[] =
 static std::map<int, float> g_statPrev;
 static ULONGLONG g_statChecksStableAt = 0;
 static bool OutfitGive(const std::string& _Name);
+static void ShopOutfitsCheck();
+static ULONGLONG g_outfitTakeAt = 0;   // v6.4: take back a shop-bought outfit 1.5 s after the purchase
 
 static void StatChecksTick(ULONGLONG _Now)
 {
@@ -4142,7 +4367,15 @@ static void StatChecksTick(ULONGLONG _Now)
 		{
 			if (kv.first.rfind("outfit:", 0) == 0 && kv.second > 0) { OutfitGive(kv.first.substr(7)); }
 		}
+
+		ShopOutfitsCheck();
 	}
+
+	if (g_outfitTakeAt != 0 && _Now >= g_outfitTakeAt && stable) { g_outfitTakeAt = 0; ShopOutfitsCheck(); }
+
+	static ULONGLONG s_outfitScan = 0;
+
+	if (stable && _Now >= s_outfitScan) { s_outfitScan = _Now + 10000; ShopOutfitsCheck(); }
 
 	for (const StatCheck& h : HIDEOUT_STATS)
 	{
@@ -4179,12 +4412,25 @@ static void StatChecksTick(ULONGLONG _Now)
 		}
 	}
 
+	// v7.0: arm wrestling losses. 441 is money won at arm wrestling, but a lost match moves it too (test 2026-11-05: a win and
+	// then a loss sent Win 1 and Win 2). armwrestling.c adds 1 to stat 443 (matches lost) on a loss, so a 441 move in the same
+	// second as a 443 move is a loss and is skipped.
+	float awLost = StatGet(443);
+	auto awPrev = g_statPrev.find(443);
+	bool awLostNow = awPrev != g_statPrev.end() && awLost > awPrev->second + 0.01f;
+
+	g_statPrev[443] = awLost;
+
 	for (const StatCheck& m : MINIGAME_STATS)
 	{
 		float v = StatGet(m.id);
 		auto it = g_statPrev.find(m.id);
 
-		if (stable && it != g_statPrev.end() && v > it->second + 0.01f)
+		if (m.id == 441 && awLostNow && it != g_statPrev.end() && v > it->second + 0.01f)
+		{
+			Log("MINIGAME: Arm Wrestling match lost (stat 443 " + std::to_string((int)awLost) + "), not a win");
+		}
+		else if (stable && it != g_statPrev.end() && v > it->second + 0.01f)
 		{
 			// v6.2: send the first "<game>: Win N" not sent yet (a separate win counter could fall behind the sent checks after a
 			// reload, and then a new win re-sent "Win 1": seen with Duels).
@@ -4216,6 +4462,160 @@ static int OutfitIndexByName(const std::string& _Name, uintptr_t _Base)
 	return -1;
 }
 
+// v6.4: outfits are items. Only outfits received from Archipelago may be owned: any other outfit from the item pool that shows
+// up as owned (bought in a shop, given by the game, left from a test) is taken away again (user rule 2026-11-05). Not touched:
+// John's own clothes (entry 0), Gentleman's Attire (every PC copy has it) and the three story uniforms (not in the pool).
+// "Received" = any "Outfit: ..." line in the client's item list (also outfits received before the progress file kept them).
+static bool g_outfitItems = false;   // option outfits on (from the client); off = vanilla, never taken
+static const std::map<std::string, std::string> OUTFIT_INTERNAL = {
+	{ "Gentleman's Attire", "social" }, { "Deadly Assassin Outfit", "gun" }, { "Elegant Suit", "suit" }, { "Walton's Gang Outfit", "dnd" },
+	{ "Bollard Twins Outfit", "rustler" }, { "Treasure Hunter Outfit", "treasur" }, { "Bandito Outfit", "bandito" },
+	{ "Reyes' Rebels Outfit", "rebel" }, { "U.S. Army Uniform", "military" }, { "U.S. Marshal Uniform", "uslaw" },
+	{ "Legend of the West", "legend" }, { "Bureau Uniform", "fbi" }, { "Duster Coat", "duster" }, { "Mexican Poncho", "poncho" },
+	{ "Rancher Outfit", "rancher" }, { "Expert Hunter Outfit", "mount" }, { "Savvy Merchant Outfit", "bruise" },
+};
+static const char* POOL_OUTFITS[] = { "gun", "suit", "dnd", "rustler", "treasur", "bandito", "rebel", "legend", "duster", "poncho",
+	"rancher", "mount", "bruise", "uslaw", "military", "fbi" };   // v6.6: the law uniforms are items too
+static const std::set<std::string> SHOP_OUTFITS = { "Shop - Elegant Suit" };   // buying these hands the outfit over
+static std::set<std::string> g_receivedOutfits;   // internal names
+static bool g_outfitListRead = false;              // the client's item list was read at least once this session
+
+static bool OutfitTake(const std::string& _Name)
+{
+	uintptr_t base = GetGlobalPtr();
+
+	if (base == 0) { return false; }
+
+	int n = OutfitIndexByName(Trim(_Name), base);
+
+	if (n < 0) { Log("outfittake: no outfit named '" + _Name + "'"); return false; }
+
+	int* flags = (int*)(base + (uintptr_t)(42265 + 2 + 18 * n + 2) * 4);
+	int before = *flags;
+
+	if ((before & 4) == 0) { return false; }
+
+	*flags = before & ~(2 | 4);
+
+	Invoke<0x0A87A573, void>(NameHash("out_" + Lower(Trim(_Name))), 0);   // SHOP::SATCHEL_SET_OUTFIT_STATE (0 = not owned)
+
+	Log("outfittake: " + _Name + " (entry " + std::to_string(n) + ") flags " + std::to_string(before) + " -> " + std::to_string(*flags));
+
+	return true;
+}
+
+// v6.6: law uniforms. The pause menu (pause.c Function_307) clears "wearable" on outfits 10, 9 and 12 (Army, Bureau, US
+// Marshal) every time it opens, unless story mission 57 is done, so a received uniform can't be picked there early. The game
+// changes outfits through Global_42826 ("next outfit"): medium_update_thread swaps John into it behind a fade (status bit 8192 =
+// fade back in), with no story check for John. F10 puts on the next received uniform that way (free roam, on foot).
+static void WearUniform()
+{
+	static const char* UNIFORMS[] = { "uslaw", "military", "fbi" };
+	static const char* NAMES[] = { "U.S. Marshal Uniform", "U.S. Army Uniform", "Bureau Uniform" };
+	static int s_next = 0;
+
+	uintptr_t base = GetGlobalPtr();
+
+	if (base == 0) { return; }
+
+	if (!SafeToDeliver() || !ACTOR::IS_PLAYER_CONTROLLABLE(-1)) { ApSay("You can change into a uniform in free roam."); return; }
+
+	int* g = (int*)base;
+
+	for (int tries = 0; tries < 3; tries++)
+	{
+		int k = (s_next + tries) % 3;
+
+		if (!g_receivedOutfits.count(UNIFORMS[k]) && ProgressGet(std::string("outfit:") + UNIFORMS[k]) <= 0) { continue; }
+
+		int n = OutfitIndexByName(UNIFORMS[k], base);
+
+		if (n < 0) { continue; }
+
+		s_next = k + 1;
+
+		int* flags = (int*)(base + (uintptr_t)(42265 + 2 + 18 * n + 2) * 4);
+
+		*flags |= 2 | 4 | 8192;   // discovered, wearable, fade back in after the swap
+		g[42826] = n;             // the game's "next outfit"
+
+		ApBig(NAMES[k], "");
+		Log(std::string("uniform: changing into ") + UNIFORMS[k] + " (entry " + std::to_string(n) + ", current outfit " + std::to_string(g[42825]) + ")");
+		return;
+	}
+
+	ApSay("No law uniforms received yet.");
+}
+
+// v7.0: law uniforms in the pause menu. pause.c runs Function_307 once each time the menu opens: it clears "wearable" (bit 4)
+// on the three uniforms unless story mission 57 is done, then sets each outfit's satchel state (3 = wearable, 2 = seen but
+// locked) and its picture ("john_out_<name>", "_lock" added when not wearable). Picking an outfit (pause event 0x67) only
+// checks bit 4 at that moment. So every frame, for each received uniform whose satchel state is not 3, put bit 2|4 back, set
+// state 3 and the unlocked picture, and tell the menu to refresh: the menu's lock is undone right after it is applied.
+static void UniformMenuTick()
+{
+	static const char* UNIFORMS[] = { "uslaw", "military", "fbi" };
+	static bool s_loggedPause = false;
+
+	if (!g_apMode || !g_outfitItems || !g_outfitListRead) { return; }
+
+	uintptr_t base = GetGlobalPtr();
+
+	if (base == 0) { return; }
+
+	bool paused = CORE::IS_GAME_PAUSED();
+
+	if (paused && !s_loggedPause) { s_loggedPause = true; Log("uniforms: plugin ticks while the game is paused"); }
+
+	bool changed = false;
+
+	for (const char* u : UNIFORMS)
+	{
+		if (!g_receivedOutfits.count(u) && ProgressGet(std::string("outfit:") + u) <= 0) { continue; }
+
+		int n = OutfitIndexByName(u, base);
+
+		if (n < 0) { continue; }
+
+		int* flags = (int*)(base + (uintptr_t)(42265 + 2 + 18 * n + 2) * 4);
+		int h = NameHash(std::string("out_") + u);
+
+		if ((*flags & (2 | 4)) == (2 | 4) && Invoke<0x25EF49AD, int>(h) == 3) { continue; }   // SHOP::SATCHEL_GET_OUTFIT_STATE
+
+		*flags |= 2 | 4;
+		Invoke<0x0A87A573, void>(h, 3);                                                         // SHOP::SATCHEL_SET_OUTFIT_STATE
+		Invoke<0x23EB81F0, void>(h, (std::string("john_out_") + u).c_str());                   // SHOP::SATCHEL_SET_OUTFIT_TEXTURE
+		changed = true;
+	}
+
+	if (changed)
+	{
+		HUD::UI_SEND_EVENT("refresh_outfits");
+
+		static ULONGLONG s_lastLog = 0;
+		ULONGLONG now = GetTickCount64();
+
+		if (now - s_lastLog > 5000) { s_lastLog = now; Log(std::string("uniforms: unlocked in the outfit menu (paused=") + (paused ? "1" : "0") + ")"); }
+	}
+}
+
+// owned but not received: take it back (after every load, 1.5 s after a shop purchase, and every 10 s in free roam)
+static void ShopOutfitsCheck()
+{
+	if (!g_outfitItems || !g_apMode || !g_outfitListRead) { return; }
+
+	bool taken = false;
+
+	for (const char* name : POOL_OUTFITS)
+	{
+		if (g_receivedOutfits.count(name) || ProgressGet(std::string("outfit:") + name) > 0) { continue; }
+
+		if (OutfitTake(name)) { taken = true; }
+	}
+
+	if (taken) { ApSay("That outfit isn't yours to keep."); }
+}
+
 static bool OutfitGive(const std::string& _Name)
 {
 	uintptr_t base = GetGlobalPtr();
@@ -4233,7 +4633,8 @@ static bool OutfitGive(const std::string& _Name)
 
 	Invoke<0x0A87A573, void>(NameHash("out_" + Lower(Trim(_Name))), 3);   // SHOP::SATCHEL_SET_OUTFIT_STATE
 
-	Log("outfitgive: " + _Name + " (entry " + std::to_string(n) + ") flags " + std::to_string(before) + " -> " + std::to_string(*flags));
+	// v6.4: only log a change (it is re-applied after every load)
+	if (*flags != before) { Log("outfitgive: " + _Name + " (entry " + std::to_string(n) + ") flags " + std::to_string(before) + " -> " + std::to_string(*flags)); }
 
 	return true;
 }
@@ -4387,7 +4788,10 @@ static void BountyTick()
 	{
 		for (long long n = high + 1; n <= value; n++)
 		{
-			SendCheck("Bounty " + std::to_string(n - ProgressGet("bty_base")));
+			long long number = n - ProgressGet("bty_base");
+
+			if (number <= g_bountyChecks) { SendCheck("Bounty " + std::to_string(number)); }
+			else { Log("bounty " + std::to_string(number) + " turned in (past this seed's " + std::to_string(g_bountyChecks) + " checks)"); }
 		}
 
 		ProgressSet("bty_high", value);
@@ -4493,11 +4897,11 @@ static const std::vector<StoreDef> STORES =
 		XX("Shotgun Ammo", 30), XX("Sniper Rifle Ammo", 40) } },
 	{ "Blackwater General Store", true, { CG("Rabbit's Foot", 25, "RABBITS_FOOT"), XX("Apple", 1), XX("Horse Pills", 20), CK("Survivalist Map", 25),
 		XX("Moonshine", 60), CK("Great Plains Map", 55) } },
-	{ "Escalera General Store", true, { CK("Bandana", 20), CK("Survivalist Map", 25), XX("Bait", 15), XX("Apple", 1), XX("Snake Oil", 30), XX("Rebel Scrap", 50) } },
+	{ "Escalera General Store", true, { CK("Bandana", 20), CK("Survivalist Map", 25), XX("Bait", 15), XX("Apple", 1), XX("Snake Oil", 30), CK("Rebel Scrap", 50) } },
 	{ "MacFarlane's Ranch General Store", true, { CK("Survivalist Map", 25), CK("Hennigan's Stead Map", 25), XX("Snake Oil", 30), XX("Revolver Ammo", 12),
 		XX("Pistol Ammo", 15), XX("Repeater Ammo", 25), XX("Rifle Ammo", 20), XX("Shotgun Ammo", 30), XX("Sniper Rifle Ammo", 40) } },
-	{ "Chuparosa General Store", true, { CK("Survivalist Map", 25), XX("Snake Oil", 30), XX("Chewing Tobacco", 35), XX("Fire Bottle", 25), CK("Perdido Map", 45),
-		CK("Diez Coronas Map", 50), XX("Bandito Scrap", 50), XX("Revolver Ammo", 12), XX("Pistol Ammo", 15), XX("Repeater Ammo", 25), XX("Rifle Ammo", 20),
+	{ "Chuparosa General Store", true, { CK("Survivalist Map", 25), XX("Snake Oil", 30), XX("Chewing Tobacco", 35), XX("Fire Bottle", 25), CK("Perdido Map", 55),
+		CK("Diez Coronas Map", 50), CK("Bandito Scrap", 50), XX("Revolver Ammo", 12), XX("Pistol Ammo", 15), XX("Repeater Ammo", 25), XX("Rifle Ammo", 20),
 		XX("Shotgun Ammo", 30), XX("Sniper Rifle Ammo", 40) } },
 	{ "Thieves' Landing Tailor", false, { CK("Bandana", 20), CK("Bollard Gang Scrap", 100), CK("Walton's Gang Scrap", 150),
 		CK("Treasure Hunter Scrap", 250), CK("Elegant Suit", 70) } },
@@ -4711,6 +5115,8 @@ static void ShopTick2()
 			Log("SHOP BOUGHT: " + location + " in " + def.store);
 
 			SendCheck(location);
+
+			if (SHOP_OUTFITS.count(location)) { g_outfitTakeAt = GetTickCount64() + 1500; }
 
 			if (item.gear != nullptr && !g_apGearGranted.count(item.gear))
 			{
@@ -4975,10 +5381,98 @@ static void ShopRulesTick()
 // Dead Eye progression (level 0 = Dead Eye disabled)
 //   0 disabled   1 basic Dead Eye   2 + auto lock-on (multilock)   3 + manual target painting   4 + faster regeneration
 // Level 4's regeneration bonus is an untested placeholder. -1 = not enforced (game decides).
-// The plugin re-applies the level every 5 seconds in normal play (never while Dead Eye is active), because the game's scripts may change it.
+// The plugin re-applies the level every 2 seconds in normal play (never while Dead Eye is active), because the game's scripts may change it.
 // ---------------------------------------------------------------------------------------------
 
 static int g_deadeyeLevel = -1;
+
+// v6.5e: Landon Ricketts lock. The Gunslinger's Tragedy (gun01) teaches target painting and can't be finished without Dead Eye 3.
+// The game's mission launcher (long_update_thread) only offers a mission while its start volume is valid:
+//     if (!IS_VOLUME_VALID(entry + 80)) { entry.f_180 = 0; return; }   // f_180 = available: marker and blip off
+// Gun01's start volume is "launch_Gun01" in "regions_layout". The plugin finds it, finds the one global slot of the mission list
+// that holds its handle, and while the level is below 3 (and the mission was not done) writes 0 there: no marker, no blip, no
+// start. At level 3 the handle is put back. The launcher writes the handle again after every load, so this runs every second.
+// (v6.5d's fixed-point push did nothing in test: that point was Landon's camp spot, not the marker.)
+static void LandonLockTick(ULONGLONG _Now)
+{
+	static int s_volume = 0, s_slot = -1;
+	static bool s_hidden = false, s_scanned = false;
+
+	if (g_deadeyeLevel < 0 || !g_apMode) { return; }
+
+	uintptr_t base = GetGlobalPtr();
+
+	if (base == 0) { return; }
+
+	if (s_volume == 0 || !VOLUME::IS_VOLUME_VALID((Volume)s_volume))
+	{
+		int found = Invoke<0xAC830865, int>(OBJECT::FIND_NAMED_LAYOUT("regions_layout"), "launch_Gun01");   // OBJECT::FIND_VOLUME_IN_LAYOUT
+
+		if (found == 0 || !VOLUME::IS_VOLUME_VALID((Volume)found)) { return; }
+
+		if (found != s_volume) { Log("landon lock: launch_Gun01 volume " + std::to_string(found)); s_scanned = false; }
+
+		s_volume = found;
+	}
+
+	int* g = (int*)base;
+
+	if (!s_scanned)
+	{
+		s_scanned = true;
+		s_slot = -1;
+
+		int matches = 0;
+		std::string list;
+
+		for (int i = 6667; i < 6667 + 40000; i++)
+		{
+			if (g[i] == s_volume) { if (matches++ == 0) { s_slot = i; } if (matches <= 5) { list += " " + std::to_string(i); } }
+		}
+
+		Log("landon lock: volume handle found in " + std::to_string(matches) + " global slot(s):" + list);
+
+		if (matches != 1) { s_slot = -1; }   // not sure which one: do not write anything, keep only the backup
+	}
+
+	LoadSentChecks();
+
+	bool locked = g_deadeyeLevel < 3 && !g_sentChecks.count("The Gunslinger's Tragedy");
+
+	if (s_slot >= 0)
+	{
+		if (locked && g[s_slot] == s_volume)
+		{
+			g[s_slot] = 0;
+
+			if (!s_hidden) { Log("landon lock: Gun01 marker hidden (Dead Eye level " + std::to_string(g_deadeyeLevel) + ")"); }
+
+			s_hidden = true;
+		}
+		else if (!locked && s_hidden && g[s_slot] == 0)
+		{
+			g[s_slot] = s_volume;
+			s_hidden = false;
+
+			Log("landon lock: Gun01 marker back (Dead Eye level " + std::to_string(g_deadeyeLevel) + ")");
+		}
+	}
+
+	// v6.5f: no push-back. Hiding the marker works (test: one slot, 8369, marker gone), and the start volume covers the town
+	// entrance, so the old backup kept throwing John out of Chuparosa (tester).
+	// v6.5g: instead a reminder while John is inside that volume, at most every 70 s (tester).
+	static ULONGLONG s_reminded = 0;
+
+	if (locked && (s_reminded == 0 || _Now > s_reminded + 70000) && VOLUME::IS_ACTOR_IN_VOLUME(ACTOR::GET_PLAYER_ACTOR(-1), (Volume)s_volume))
+	{
+		s_reminded = _Now;
+
+		ApBig("You need Deadeye Level 3 to progress in Story", "");
+		ApSound("HUD_FAILED_DELAY_MASTER");
+
+		Log("landon lock: reminder shown (John in Chuparosa, Dead Eye level " + std::to_string(g_deadeyeLevel) + ")");
+	}
+}
 
 static void ApplyDeadEyeLevel(bool _Log)
 {
@@ -4993,10 +5487,12 @@ static void ApplyDeadEyeLevel(bool _Log)
 	}
 	else
 	{
-		ACTOR::SET_DISABLE_DEADEYE(player, g_deadeyeLevel == 0);
-		ACTOR::SET_DEADEYE_MULTILOCK_ENABLE(player, g_deadeyeLevel >= 2);
-		ACTOR::SET_DEADEYE_TARGETPAINT_ENABLE(player, g_deadeyeLevel >= 3);
-		ACTOR::SET_DEADEYE_REGENERATION_RATE_MULTIPLIER(player, g_deadeyeLevel >= 4 ? 2.0f : 1.0f);
+		int level = g_deadeyeLevel;
+
+		ACTOR::SET_DISABLE_DEADEYE(player, level == 0);
+		ACTOR::SET_DEADEYE_MULTILOCK_ENABLE(player, level >= 2);
+		ACTOR::SET_DEADEYE_TARGETPAINT_ENABLE(player, level >= 3);
+		ACTOR::SET_DEADEYE_REGENERATION_RATE_MULTIPLIER(player, level >= 4 ? 2.0f : 1.0f);
 	}
 
 	if (_Log)
@@ -5291,17 +5787,20 @@ static bool g_trackerAfterLoad = false;
 
 static void MissionCompleted()
 {
-	// v6.3: 56 mission scripts for 57 story missions: "A Gentle Drive with Friends" is the one without a script of its own, so a
-	// story mission that ends without a known script is that one (once).
+	// v6.3: 56 mission scripts for 57 story missions, so a story mission that ends without a known script is the one without a
+	// script (once). v6.4: that one is "Spare the Rod, Spoil the Bandit" (test 2026-11-05: grave01 is Exhuming, the no-script
+	// mission came between Old Swindler Blues and A Tempest Looms, and grave02 is A Gentle Drive with Friends).
+	static const char* NO_SCRIPT_MISSION = "Spare the Rod, Spoil the Bandit";
+
 	if (g_lastMissionScript.empty() || g_scriptInfo.find(g_lastMissionScript) == g_scriptInfo.end())
 	{
 		LoadSentChecks();
 
-		if (!g_sentChecks.count("A Gentle Drive with Friends"))
+		if (!g_sentChecks.count(NO_SCRIPT_MISSION))
 		{
-			Log("MISSION DONE: unknown script '" + g_lastMissionScript + "', taken as A Gentle Drive with Friends (the only mission without a script)");
+			Log("MISSION DONE: unknown script '" + g_lastMissionScript + "', taken as " + NO_SCRIPT_MISSION + " (the only mission without a script)");
 
-			SendCheck("A Gentle Drive with Friends");
+			SendCheck(NO_SCRIPT_MISSION);
 
 			g_lastMissionScript.clear();
 
@@ -5379,6 +5878,18 @@ static void FinalStrangerWatch(ULONGLONG _Now)
 
 			g_finalStrangerScript = kv.first;
 			g_finalStrangerSeen = _Now;
+		}
+
+		// v6.4: a story mission whose objectives are not in the hash map (We Shall Be Together in Paradise, fort02, test
+		// 2026-11-05) is still found by its running script. Only while no mission is known yet, so a script that starts early for
+		// the next mission cannot take over the one being played.
+		// Missions already sent are skipped (the script of the mission just finished can still be running for a moment).
+		if (kv.second.kind == "mission" && g_lastMissionScript.empty() && !g_sentChecks.count(kv.second.location)
+			&& CORE::_IS_ANY_NAMED_SCRIPT_RUNNING(kv.first.c_str()))
+		{
+			Log("tracker: mission " + kv.second.location + " (" + kv.first + ", running script)");
+
+			g_lastMissionScript = kv.first;
 		}
 	}
 }
@@ -5543,7 +6054,13 @@ static Actor g_herbertActor = 0;
 // v6.2: the tester heard nothing. Voices are assigned per actor (SET_AMBIENT_VOICE_NAME; in the scripts the voice names are the
 // model names), so Herbert now gets his own voice explicitly. "herbertvoice <name>", "herbertsay <line>" and "herbertvisible 1"
 // change the voice, the lines and the visibility for testing without a rebuild.
-static std::string g_herbertVoice = "MISC_HerbertMoon";
+// v6.4: still silent in test 2026-11-05 with SAY_SINGLE_LINE_STRING + MISC_HerbertMoon. The game's own shopkeeper_brain speaks
+// with SAY_SINGLE_LINE_CONTEXT(actor, context id, player, 0, 0, 0, -1, -1, 0, 1) after AI_SPEECH_SET_ALLOW_FOR_ACTOR(actor, 1),
+// so that is the default now ("herbertmode string" goes back). The learned shopkeeper model brings its own voice, so no voice
+// is forced unless "herbertvoice <name>" sets one ("herbertvoice none" clears it). Every line logs whether speech is playing.
+static std::string g_herbertVoice = "";
+static bool g_herbertContext = true;
+static ULONGLONG g_herbertCheckAt = 0;
 static std::string g_herbertForcedLine;
 static bool g_herbertVisible = false;
 static ULONGLONG g_herbertNextLine = 0;
@@ -5553,12 +6070,28 @@ static int g_herbertLines = 0;
 static void HerbertSpeak()
 {
 	static const char* LINES[] = { "SHOP_BROWSE_CHATTER", "SHOP_ENTER", "SHOP_TRANSACTION", "SHOP_END_TRANSACTION", "SHOP_BROWSE_CHATTER" };
+	static const int CONTEXTS[] = { 89, 87, 90, 88, 87 };   // SHOP_ENTER, SHOP_BROWSE_CHATTER, SHOP_TRANSACTION, SHOP_END_TRANSACTION (rdr2init)
 
-	const char* line = g_herbertForcedLine.empty() ? LINES[std::rand() % 5] : g_herbertForcedLine.c_str();
+	Actor player = ACTOR::GET_PLAYER_ACTOR(-1);
 
-	Invoke<0xBA734A15, void>(g_herbertActor, line, 1, 1, 0, 0, 1, 0);   // AUDIO::SAY_SINGLE_LINE_STRING
+	if (g_herbertContext && g_herbertForcedLine.empty())
+	{
+		int context = CONTEXTS[g_herbertLines % 5];
 
-	Log(std::string("herbert: says ") + line);
+		Invoke<0x31BAF169, void>(g_herbertActor, context, player, 0, 0, 0, -1, -1, 0, 1);   // AUDIO::SAY_SINGLE_LINE_CONTEXT
+
+		Log("herbert: says context " + std::to_string(context));
+	}
+	else
+	{
+		const char* line = g_herbertForcedLine.empty() ? LINES[std::rand() % 5] : g_herbertForcedLine.c_str();
+
+		Invoke<0xBA734A15, void>(g_herbertActor, line, 1, 1, 0, 0, 1, 0);   // AUDIO::SAY_SINGLE_LINE_STRING
+
+		Log(std::string("herbert: says ") + line);
+	}
+
+	g_herbertCheckAt = GetTickCount64() + 600;
 }
 
 static void HerbertCommand()
@@ -5593,14 +6126,16 @@ static void HerbertCommand()
 	Layout layout = OBJECT::FIND_NAMED_LAYOUT("PlayerLayout");
 	std::string name = "ap_herbert_" + std::to_string(g_spawnCounter++);
 
-	g_herbertActor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, name.c_str(), model, Vector2(position.x + 1.0f, position.y + 1.0f), position.z + 0.5f, Vector2(), 0.0f);
+	g_herbertActor = OBJECT::CREATE_ACTOR_IN_LAYOUT(layout, name.c_str(), model, Vector2(position.x + 1.0f, position.y + 0.5f), position.z + 1.0f, Vector2(), 0.0f);
 
 	if ((int)g_herbertActor <= 0) { Log("herbert: spawn failed"); g_herbertActor = 0; return; }
 
 	if (!g_herbertVisible) { ACTORDRAW::SET_DRAW_ACTOR(g_herbertActor, false); }
 	ACTOR::SET_ACTOR_INVULNERABILITY(g_herbertActor, true);
-	AUDIO::SET_AMBIENT_VOICE_NAME(g_herbertActor, g_herbertVoice.c_str());
-	Log("herbert: voice " + g_herbertVoice + (g_herbertVisible ? ", visible" : ", invisible"));
+	AI_SPEECH::AI_SPEECH_SET_ALLOW_FOR_ACTOR((int)g_herbertActor, 1);
+	if (!g_herbertVoice.empty()) { AUDIO::SET_AMBIENT_VOICE_NAME(g_herbertActor, g_herbertVoice.c_str()); }
+	Log("herbert: model " + std::to_string((int)model) + ", voice " + (g_herbertVoice.empty() ? std::string("(model's own)") : g_herbertVoice)
+		+ (g_herbertVisible ? ", visible" : ", invisible") + (g_herbertContext ? ", context lines" : ", string lines"));
 
 	g_herbertLines = 0;
 	g_herbertNextLine = GetTickCount64() + 300;
@@ -5626,14 +6161,27 @@ static void HerbertTick(ULONGLONG _Now)
 		return;
 	}
 
-	// keep him at John's shoulder
+	// keep him at John's shoulder (v6.4: only when he falls behind, a teleport every tick may cut his line off)
 	Vector3 p = ACTOR::GET_POSITION(ACTOR::GET_PLAYER_ACTOR(-1));
-	Vector3 target = p;
+	Vector3 h = ACTOR::GET_POSITION(g_herbertActor);
+	float dx = h.x - p.x, dy = h.y - p.y, dz = h.z - p.z;
 
-	target.x += 0.8f;
-	target.y += 0.8f;
+	if (dx * dx + dy * dy + dz * dz > 6.0f)
+	{
+		Vector3 target = p;
 
-	ACTOR::TELEPORT_ACTOR(g_herbertActor, &target, false, false, false);
+		target.x += 0.8f;
+		target.z += 0.8f;
+
+		ACTOR::TELEPORT_ACTOR(g_herbertActor, &target, false, false, false);
+	}
+
+	if (g_herbertCheckAt != 0 && _Now >= g_herbertCheckAt)
+	{
+		g_herbertCheckAt = 0;
+
+		Log(std::string("herbert: speech playing=") + (AUDIO::IS_ANY_SPEECH_PLAYING(g_herbertActor) ? "yes" : "no") + ", ambient=" + (AUDIO::IS_AMBIENT_SPEECH_PLAYING((int)g_herbertActor) ? "yes" : "no"));
+	}
 
 	if (_Now >= g_herbertNextLine && g_herbertLines < 4)
 	{
@@ -5774,18 +6322,12 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 
 	if (_Item.rfind("Outfit: ", 0) == 0)
 	{
-		static const std::map<std::string, std::string> OUTFITS = {
-			{ "Gentleman's Attire", "social" }, { "Deadly Assassin Outfit", "gun" }, { "Elegant Suit", "suit" }, { "Walton's Gang Outfit", "dnd" },
-			{ "Bollard Twins Outfit", "rustler" }, { "Treasure Hunter Outfit", "treasur" }, { "Bandito Outfit", "bandito" },
-			{ "Reyes' Rebels Outfit", "rebel" }, { "U.S. Army Uniform", "military" }, { "U.S. Marshal Uniform", "uslaw" },
-			{ "Legend of the West", "legend" }, { "Bureau Uniform", "fbi" }, { "Duster Coat", "duster" }, { "Mexican Poncho", "poncho" },
-			{ "Rancher Outfit", "rancher" }, { "Expert Hunter Outfit", "mount" }, { "Savvy Merchant Outfit", "bruise" },
-		};
+		const auto& OUTFITS = OUTFIT_INTERNAL;
 
 		auto it = OUTFITS.find(_Item.substr(8));
 
 		// outfits are saved by the game itself, and re-applied from the progress file after a load (see ApplySavedOutfits)
-		if (it != OUTFITS.end()) { OutfitGive(it->second); ProgressSet("outfit:" + it->second, 1); }
+		if (it != OUTFITS.end()) { g_receivedOutfits.insert(it->second); OutfitGive(it->second); ProgressSet("outfit:" + it->second, 1); }
 
 		Announce(_Item.substr(8), from, true);
 
@@ -5796,7 +6338,8 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 
 	if (_Item == "Dead Eye Refill")
 	{
-		ACTOR::SET_PLAYER_DEADEYE_POINTS(player, 1000.0f, true);
+		// v6.4: a full meter is 100 points (the game's own refills use 100); 1000 overflowed and the meter wrapped around
+		ACTOR::SET_PLAYER_DEADEYE_POINTS(player, 100.0f, true);
 
 		Announce("Dead Eye Refill", from, false);
 
@@ -5840,20 +6383,23 @@ static void ApplyApItem(const std::string& _Item, const std::string& _Sender)
 	{
 		std::string animal = _Item.substr(0, _Item.size() - 12);
 
-		QueueTrap(animal == "Random Animal" ? "spawn" : "spawn " + AnimalKey(animal), "Something Is Stalking You", "You hear something in the brush...");
+		QueueTrap(animal == "Random Animal" ? "spawn" : "spawn " + AnimalKey(animal), "Something Is Stalking You", "");
 
 		return;
 	}
 
-	if (_Item == "Gang Attack Trap") { QueueTrap("gangattack", "Riders On The Horizon", "Outlaws are coming for you!"); return; }
-	if (_Item == "Lawmen Posse Trap") { QueueTrap("posse", "The Law Is Coming", "A posse is riding your way!"); return; }
+	if (_Item == "Gang Attack Trap") { QueueTrap("gangattack", "Riders On The Horizon", ""); return; }
+	if (_Item == "Lawmen Posse Trap") { QueueTrap("posse", "The Law Is Coming", ""); return; }
 	if (_Item == "Dead Eye Drain Trap") { QueueTrap("deadeyedrain", "", ""); return; }   // one alert only ("Dead Eye Drained")
-	if (_Item == "Drunk Trap") { QueueTrap("drunk 30", "Somebody Spiked Your Drink", "The world starts to spin..."); return; }
-	if (_Item == "Slow Motion Trap") { QueueTrap("slowmo 8", "Time Slows Down", "Everything feels heavy..."); return; }
-	if (_Item == "Stampede Trap") { QueueTrap("stampede", "The Ground Is Shaking", "Something big is coming!"); return; }
-	if (_Item == "Out of Bullets Trap") { QueueTrap("outofbullets", "Your Gunbelt Feels Light", "Check your ammo..."); return; }
-	if (_Item == "Lightning Storm Trap") { QueueTrap("lightning", "Bolt From The Blue", "Lightning is about to strike close by!"); return; }
-	if (_Item == "Herbert Moon Trap") { QueueTrap("herbert", "Herbert Moon has something to say...", ""); return; }
+	if (_Item == "Drunk Trap") { QueueTrap("drunk 30", "Somebody Spiked Your Drink", ""); return; }
+	if (_Item == "Slow Motion Trap") { QueueTrap("slowmo 8", "Time Slows Down", ""); return; }
+	if (_Item == "Stampede Trap") { QueueTrap("stampede", "The Ground Is Shaking", ""); return; }
+	if (_Item == "Out of Bullets Trap") { QueueTrap("outofbullets", "Your Gunbelt Feels Light", ""); return; }
+	if (_Item == "Lightning Storm Trap") { QueueTrap("lightning", "Bolt From the Sky", ""); return; }
+	if (_Item == "Duel Trap") { QueueTrap("duel", "A Challenger Approaches...", ""); return; }
+	// v6.4: the Herbert Moon trap was taken out (his lines never played in game). Older seeds can still send it: it becomes the
+	// drunk trap. The "herbert" test command is left in for later experiments.
+	if (_Item == "Herbert Moon Trap") { QueueTrap("drunk 30", "Somebody Spiked Your Drink", ""); return; }
 
 	Log("ap item: unknown item '" + _Item + "'");
 
@@ -5930,8 +6476,39 @@ static bool UseSeed(const std::string& _Seed)
 
 // v6.2 tally (F9): the client writes "tally <label>|<done>|<total>" lines into the items file (it knows every location of the
 // seed); F9 shows them in one help box. Without a client it falls back to counting the checks this game has sent.
-static std::vector<std::string> g_tally;
+static std::vector<std::pair<std::string, std::string>> g_tally;   // label, "done/total"
 static ULONGLONG g_tallyUntil = 0;   // the tally stays up 30 s, or until F9 is pressed again
+static bool g_tallyColor = true;     // v6.4: coloured labels, white numbers ("tallycolor 0" turns it off)
+
+// v6.4: the game's text takes a colour tag "<0xRRGGBB>" (the poker / liar's dice scripts colour the player's name this way);
+// it holds until the next tag, so every label gets its colour and every number goes back to white.
+static std::string TallyColor(const std::string& label)
+{
+	static const std::map<std::string, std::string> colors = {
+		{"Archipelago", "0xE8C878"}, {"Story", "0xF0C040"}, {"Strangers", "0xF09A48"}, {"Hideouts", "0xE85050"},
+		{"Gang Kills", "0xE85050"}, {"Hat Tricks", "0xE8E070"}, {"Minigames", "0x60D0B0"}, {"Bounties", "0xD0A070"},
+		{"Shops", "0x78B8F0"}, {"All checks", "0xF0C040"}, {"Items received", "0xC098F0"}, {"Cash received", "0x70E070"},
+		{"Traps survived", "0xF070C0"}, {"Checks sent", "0xF0C040"}, {"Dead Eye", "0xFF9A3C"}, {"Outfits", "0xF2A0A0"}};
+	auto it = colors.find(label);
+	return it == colors.end() ? std::string("0xF0C040") : it->second;
+}
+
+// v7.0: shorter names on screen (the client still sends the long ones)
+static std::string TallyLabel(const std::string& label)
+{
+	if (label == "Items received") { return "Items"; }
+	if (label == "Cash received") { return "Cash"; }
+	if (label == "Traps survived") { return "Traps"; }
+	return label;
+}
+
+static std::string TallyEntry(const std::string& label, const std::string& value)
+{
+	std::string shown = TallyLabel(label);
+
+	if (!g_tallyColor) { return value.empty() ? shown : shown + " " + value; }
+	return "<" + TallyColor(label) + ">" + shown + (value.empty() ? std::string() : " <0xFFFFFF>" + value);
+}
 
 static void HideTally()
 {
@@ -5944,16 +6521,47 @@ static void ShowTally()
 {
 	if (g_tallyUntil != 0 && GetTickCount64() < g_tallyUntil) { HideTally(); return; }   // second press closes it
 
-	std::string text = "Archipelago";
+	// v7.0: the help text breaks (stray symbols after the last entry) when it gets long: the v6.4 tally was ~680 characters
+	// with 44 colour tags. Each number is already white, so the separators need no tag of their own (2 tags per entry), and
+	// once the text passes TALLY_MAX_LEN characters or TALLY_MAX_TAGS tags the rest is written without colour.
+	static const size_t TALLY_MAX_LEN = 560;
+	static const int TALLY_MAX_TAGS = 32;
 
-	if (!g_tally.empty())
+	std::vector<std::pair<std::string, std::string>> entries = g_tally;
+
+	if (entries.empty())
 	{
-		for (const std::string& entry : g_tally) { text += " | " + entry; }
+		entries.push_back({ "Checks sent", std::to_string(g_sentChecks.size()) });
+		entries.push_back({ "Items received", std::to_string(ProgressGet("ap_index")) });
+		entries.push_back({ "(connect the client for totals)", "" });
 	}
-	else
+
+	std::string text = g_tallyColor ? "<0xE8C878>Archipelago" : "Archipelago";   // its separator stays gold
+	int tags = g_tallyColor ? 1 : 0;
+	bool colour = g_tallyColor;
+
+	for (const auto& entry : entries)
 	{
-		text += " | Checks sent " + std::to_string(g_sentChecks.size()) + " | Items received " + std::to_string(ProgressGet("ap_index"))
-			+ " | (connect the client for totals)";
+		std::string plain = " | " + TallyLabel(entry.first) + (entry.second.empty() ? std::string() : " " + entry.second);
+
+		if (colour)
+		{
+			std::string coloured = " | " + TallyEntry(entry.first, entry.second);
+			int need = entry.second.empty() ? 1 : 2;
+
+			if (tags + need <= TALLY_MAX_TAGS && text.size() + coloured.size() <= TALLY_MAX_LEN)
+			{
+				text += coloured;
+				tags += need;
+
+				if (entry.second.empty()) { text += "<0xFFFFFF>"; tags++; }   // back to white after a label with no number
+				continue;
+			}
+
+			colour = false;   // over budget: plain from here on (the previous number left the text white)
+		}
+
+		text += plain;
 	}
 
 	HUD::PRINT_HELP_B(text.c_str(), 30.0f, true, 1, 0, 0, 0, 0);
@@ -5979,7 +6587,7 @@ static void ApItemsTick()
 	in.close();
 
 	{
-		std::vector<std::string> tally;
+		std::vector<std::pair<std::string, std::string>> tally;
 
 		for (const std::string& l : lines)
 		{
@@ -5994,7 +6602,7 @@ static void ApItemsTick()
 			std::string done = b == std::string::npos ? rest.substr(a + 1) : rest.substr(a + 1, b - a - 1);
 			std::string total = b == std::string::npos ? std::string() : rest.substr(b + 1);
 
-			tally.push_back(label + " " + done + (total.empty() ? std::string() : "/" + total));
+			tally.push_back({label, done + (total.empty() ? std::string() : "/" + total)});
 		}
 
 		g_tally.swap(tally);
@@ -6027,7 +6635,13 @@ static void ApItemsTick()
 			if (rest == "sounds off") { g_sounds = false; } else if (rest == "sounds on") { g_sounds = true; }
 			if (rest.rfind("gang_kill_checks ", 0) == 0) { g_gangKillChecks = std::atoi(rest.c_str() + 17); }
 			if (rest.rfind("hat_tricks ", 0) == 0) { g_hatTrickChecks = std::atoi(rest.c_str() + 11); }
+			if (rest.rfind("minigame_wins ", 0) == 0) { g_minigameWins = std::atoi(rest.c_str() + 14); }
+			if (rest.rfind("bounty_checks ", 0) == 0) { g_bountyChecks = std::atoi(rest.c_str() + 14); }
+			if (rest == "fame_ranks on") { g_fameRanks = true; } else if (rest == "fame_ranks off") { g_fameRanks = false; }
+			if (rest == "honor_ranks good") { g_honorRanks = 1; } else if (rest == "honor_ranks bad") { g_honorRanks = 2; }
+			else if (rest == "honor_ranks off") { g_honorRanks = 0; }
 			if (rest == "found_popups off") { g_foundPopups = false; } else if (rest == "found_popups on") { g_foundPopups = true; }
+			if (rest == "outfits on") { g_outfitItems = true; } else if (rest == "outfits off") { g_outfitItems = false; }
 
 			if (rest == "weapon_mode vanilla") { g_vanillaWeapons = true; }
 			else if (rest.rfind("weapon_mode ", 0) == 0) { g_vanillaWeapons = false; }
@@ -6048,6 +6662,13 @@ static void ApItemsTick()
 		std::string item = Trim(l.substr(a + 1, b == std::string::npos ? std::string::npos : b - a - 1));
 		std::string sender = b == std::string::npos ? "" : Trim(l.substr(b + 1));
 
+		if (item.rfind("Outfit: ", 0) == 0)
+		{
+			auto o = OUTFIT_INTERNAL.find(item.substr(8));
+
+			if (o != OUTFIT_INTERNAL.end()) { g_receivedOutfits.insert(o->second); }
+		}
+
 		if (index <= applied) { continue; }
 
 		Log("ap item #" + std::to_string(index) + ": " + item + (sender.empty() ? "" : " from " + sender));
@@ -6058,6 +6679,8 @@ static void ApItemsTick()
 
 		ProgressSet("ap_index", applied);
 	}
+
+	g_outfitListRead = true;
 
 	if (g_itemsThisTick > 3) { ApBig("Archipelago", std::to_string(applied - appliedBefore) + " items received"); }
 
@@ -6071,6 +6694,9 @@ static void TrapQueueTick(ULONGLONG _Now)
 	if (g_trapQueue2.empty() || _Now < s_next) { return; }
 
 	if (!SafeToDeliver() || !ACTOR::IS_PLAYER_CONTROLLABLE(-1)) { return; }
+
+	// v6.5c: a duel needs John on foot; the duel trap waits (and holds the traps behind it) until he gets off his horse
+	if (g_trapQueue2.front().command == "duel" && (!OnFoot() || g_duelState != 0 || g_duelWaitFoot)) { return; }
 
 	PendingTrap trap = g_trapQueue2.front();
 
@@ -6086,6 +6712,8 @@ static void TrapQueueTick(ULONGLONG _Now)
 
 	if (!trap.title.empty()) { ApBig(trap.title, trap.text); ApSound("HUD_FAILED_DELAY_MASTER"); }
 
+	if (trap.command == "duel") { DuelMusic(); }   // the music starts with the warning
+
 	g_delayed.push_back({ _Now + delay, trap.command });
 }
 
@@ -6098,7 +6726,7 @@ void Application::Initialize(HMODULE _Module)
 {
 	ScriptRegister(_Module, []
 	{
-		Log("script v6.3 beta 2.2 started");
+		Log("script v7.0 Beta 3.0 started");
 
 			LoadMissionTable();
 
@@ -6131,7 +6759,7 @@ void Application::Initialize(HMODULE _Module)
 			ULONGLONG nextPerfLog = 0;
 			ULONGLONG nextWeaponWatch = 0;
 			ULONGLONG nextShopWatch = 0;
-		bool f7 = false, statKeyA = false, statKeyB = false, f9 = false, f10 = false, f11 = false;
+		bool f7 = false, statKeyA = false, statKeyB = false, f9 = false, f10 = false;
 
 		while (true)
 		{
@@ -6301,6 +6929,11 @@ void Application::Initialize(HMODULE _Module)
 						HEALTH::SET_ACTOR_DRUNK(drunkPlayer, false);
 
 						Log("drunk: ended");
+					}
+					else if (g_duelState != 0)
+					{
+						// v6.5c: a duel sobers John up (the dueling script does it); stay sober until it is over
+						// (test: the drunk trap was re-applied a second into a duel)
 					}
 					else if (!HEALTH::IS_ACTOR_DRUNK(drunkPlayer))
 					{
@@ -6513,7 +7146,7 @@ void Application::Initialize(HMODULE _Module)
 							Vector3 blast = position;
 
 							blast.x += std::cos(angle) * distance;
-							blast.y += std::sin(angle) * distance;
+							blast.z += std::sin(angle) * distance;
 
 							Vector3 sphere;
 
@@ -6682,26 +7315,20 @@ void Application::Initialize(HMODULE _Module)
 					}
 					else if (command == "herbert") { HerbertCommand(); }
 					else if (command == "lightning") { LightningCommand(); }
-					else if (command.rfind("herbertvoice ", 0) == 0) { g_herbertVoice = Trim(command.substr(13)); Log("herbert: voice set to " + g_herbertVoice); }
+					else if (command == "duel" || command == "duelprobe") { DuelCommand(); }
+					else if (command.rfind("herbertvoice ", 0) == 0) { g_herbertVoice = Trim(command.substr(13)); if (g_herbertVoice == "none") { g_herbertVoice.clear(); } Log("herbert: voice set to '" + g_herbertVoice + "'"); }
+					else if (command == "herbertmode string" || command == "herbertmode context") { g_herbertContext = command == "herbertmode context"; Log(std::string("herbert: ") + (g_herbertContext ? "context" : "string") + " lines"); }
 					else if (command.rfind("herbertsay", 0) == 0) { g_herbertForcedLine = command.size() > 11 ? Trim(command.substr(11)) : std::string(); Log("herbert: line set to '" + g_herbertForcedLine + "'"); }
 					else if (command == "herbertvisible 1" || command == "herbertvisible 0") { g_herbertVisible = command == "herbertvisible 1"; }
 					else if (command.rfind("found ", 0) == 0) { FoundPopup(command.substr(6)); }
 					else if (command == "sounds 1" || command == "sounds 0") { g_sounds = command == "sounds 1"; }
-					else if (command.rfind("traplink ", 0) == 0)
-					{
-						// v6.2 TrapLink: "traplink <our trap item>|<who sent it>" from the client (a trap another game received)
-						std::string rest = command.substr(9);
-						size_t bar = rest.find('|');
-						std::string item = Trim(rest.substr(0, bar));
-						std::string who = bar == std::string::npos ? std::string("TrapLink") : Trim(rest.substr(bar + 1));
-
-						Log("traplink: " + item + " from " + who);
-
-						if (item.find("Trap") != std::string::npos) { ApplyApItem(item, who + " (TrapLink)"); }
-					}
+					else if (command == "tallycolor 1" || command == "tallycolor 0") { g_tallyColor = command == "tallycolor 1"; Log(std::string("tally colours ") + (g_tallyColor ? "on" : "off")); }
 					else if (command == "verbose 1" || command == "verbose 0") { g_verbose = command == "verbose 1"; Log(std::string("verbose log ") + (g_verbose ? "on" : "off")); }
 					else if (command == "outfitdump") { OutfitDump(); }
 					else if (command.rfind("outfitgive ", 0) == 0) { OutfitGive(command.substr(11)); }
+					else if (command.rfind("outfittake ", 0) == 0) { OutfitTake(command.substr(11)); }
+					else if (command == "wearuniform") { WearUniform(); }
+					else if (command == "outfitcheck") { Log("outfitcheck: received " + std::to_string(g_receivedOutfits.size()) + ", option " + (g_outfitItems ? "on" : "off")); ShopOutfitsCheck(); }
 					else if (command == "posse")
 					{
 						g_gangDistanceBase = 40.0f;
@@ -6711,7 +7338,7 @@ void Application::Initialize(HMODULE _Module)
 					else if (command == "deadeyedrain")
 					{
 						ACTOR::SET_PLAYER_DEADEYE_POINTS(ACTOR::GET_PLAYER_ACTOR(-1), 0.0f, true);
-						ApBig("Dead Eye Drained", "Your focus is gone.");
+						ApBig("Dead Eye Drained", "");
 					}
 					else if (command.rfind("sendcheck ", 0) == 0)
 					{
@@ -7010,6 +7637,7 @@ void Application::Initialize(HMODULE _Module)
 
 
 			DeathWatch();
+			UniformMenuTick();   // v7.0: every frame, so the pause menu's uniform lock is undone right away
 
 			if (g_shopRules && now >= nextShopWatch)
 			{
@@ -7042,7 +7670,7 @@ void Application::Initialize(HMODULE _Module)
 
 			if (g_deadeyeLevel >= 0 && now >= nextDeadeye)
 			{
-				nextDeadeye = now + 5000;
+				nextDeadeye = now + 2000;
 
 				// Not while Dead Eye is active: changing its settings mid-use could cancel it.
 				if (GAME::GET_GAME_STATE() == 3 && !ACTOR::IS_PLAYER_DEADEYE(ACTOR::GET_PLAYER_ACTOR(-1)))
@@ -7057,6 +7685,8 @@ void Application::Initialize(HMODULE _Module)
 			{
 				ShowTally();
 			}
+
+			if (KeyEdge(KEY_F10, f10)) { WearUniform(); }   // v6.6: put on a received law uniform
 
 			ScriptWait(0);
 		}

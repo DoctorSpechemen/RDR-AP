@@ -392,7 +392,39 @@ def outfit_icon(name, path):
 
 
 # ---------------------------------------------------------------- map
-def draw_map(path, boxes, W=1200, H=800, seed=7, labels=None):
+def badge(d, name, x, y):
+    """Little ink drawings for the Anywhere pins: a hat, a pair of cards, a wanted poster. Original artwork."""
+    ink, paper = (84, 52, 30, 255), (250, 238, 210, 255)
+    if name == "Hat Tricks":                                                 # cowboy hat
+        d.ellipse((x - 26, y + 4, x + 26, y + 16), fill=(120, 80, 46, 255), outline=ink, width=2)
+        d.rounded_rectangle((x - 13, y - 12, x + 13, y + 10), 7, fill=(140, 94, 54, 255), outline=ink, width=2)
+        d.rectangle((x - 13, y + 1, x + 13, y + 5), fill=(150, 30, 26, 255))
+    elif name == "Minigames":                                                # two playing cards and a die
+        for dx, ang in ((-10, -12), (6, 10)):
+            cx = x + dx
+            d.polygon([(cx - 9 + ang * 0.3, y - 13), (cx + 9 + ang * 0.3, y - 13), (cx + 9 - ang * 0.3, y + 13),
+                       (cx - 9 - ang * 0.3, y + 13)], fill=paper, outline=ink)
+        d.polygon([(x + 4, y - 3), (x + 8, y + 3), (x + 4, y + 8), (x, y + 3)], fill=(150, 30, 26, 255))   # diamond
+        d.rounded_rectangle((x + 16, y + 2, x + 30, y + 16), 3, fill=paper, outline=ink, width=2)
+        for px, py in ((x + 20, y + 6), (x + 26, y + 12)):
+            d.ellipse((px - 1.6, py - 1.6, px + 1.6, py + 1.6), fill=ink)
+    elif name == "Ranks":                                                    # a sheriff's star
+        pts = []
+        for i in range(10):
+            r = 15 if i % 2 == 0 else 6
+            a = math.pi / 2 + i * math.pi / 5
+            pts.append((x + r * math.cos(a), y - r * math.sin(a)))
+        d.polygon(pts, fill=(212, 170, 60, 255), outline=ink)
+        d.ellipse((x - 3, y - 3, x + 3, y + 3), fill=ink)
+    elif name == "Bounties":                                                 # wanted poster
+        d.rectangle((x - 14, y - 16, x + 14, y + 16), fill=paper, outline=ink, width=2)
+        d.rectangle((x - 10, y - 12, x + 10, y - 9), fill=ink)
+        d.ellipse((x - 5, y - 6, x + 5, y + 4), fill=(140, 94, 54, 255), outline=ink)
+        d.rectangle((x - 10, y + 8, x + 10, y + 10), fill=ink)
+        d.ellipse((x - 2, y - 19, x + 2, y - 15), fill=(150, 30, 26, 255))   # the nail
+
+
+def draw_map(path, boxes, W=1200, H=800, seed=7, labels=None, keepout=(), anywhere_pins=()):
     """Hand-drawn style frontier map: parchment, three territories with rough borders, a river border, mountains,
     cacti and pines, a compass rose and a title ribbon. Original artwork."""
     import random
@@ -437,14 +469,8 @@ def draw_map(path, boxes, W=1200, H=800, seed=7, labels=None):
     img.alpha_composite(over)
     d = ImageDraw.Draw(img)
 
-    # river between New Austin and Nuevo Paraiso, and along the top of New Austin
+    # (rivers removed 2026-11-05, user request)
     na, np_, we = boxes["New Austin"], boxes["Nuevo Paraiso"], boxes["West Elizabeth"]
-    rx = (na[2] + np_[0]) / 2
-    river = [(rx + math.sin(t / 30) * 10, t) for t in range(int(na[1]) - 10, H - 10, 6)]
-    d.line(river, fill=(70, 120, 170, 255), width=9, joint="curve")
-    ry = (we[3] + na[1]) / 2
-    river2 = [(t, ry + math.sin(t / 40) * 8) for t in range(30, int(rx) + 4, 6)]
-    d.line(river2, fill=(70, 120, 170, 255), width=8, joint="curve")
 
     def mountain(x, y, s):
         d.polygon([(x - s, y), (x, y - s * 1.2), (x + s, y)], fill=(130, 96, 64, 255), outline=(70, 44, 26, 255))
@@ -465,10 +491,22 @@ def draw_map(path, boxes, W=1200, H=800, seed=7, labels=None):
                       fill=(46, 86, 54, 255))
         d.rectangle((x - s * 0.08, y, x + s * 0.08, y + s * 0.18), fill=(90, 60, 30, 255))
 
+    def clear(x, y, s):
+        # a pin is a 36 px square with its label under it (y + 22 .. y + 42, up to ~70 px each side): keep scenery off both
+        for px, py in keepout:
+            if px - 66 - s * 0.6 < x < px + 66 + s * 0.6 and py - 24 < y < py + 46 + s:
+                return False
+        return True
+
     def scatter(box, fn, count, s):
         x0, y0, x1, y1 = box
-        for _ in range(count):
-            fn(rnd.uniform(x0 + 30, x1 - 30), rnd.uniform(y0 + 70, y1 - 20), s * rnd.uniform(0.8, 1.2))
+        placed, tries = 0, 0
+        while placed < count and tries < count * 40:
+            tries += 1
+            x, y, size = rnd.uniform(x0 + 30, x1 - 30), rnd.uniform(y0 + 70, y1 - 20), s * rnd.uniform(0.8, 1.2)
+            if clear(x, y, size):
+                fn(x, y, size)
+                placed += 1
 
     def adobe(x, y, s):
         wall, dark = (200, 140, 92, 255), (120, 70, 40, 255)
@@ -491,6 +529,8 @@ def draw_map(path, boxes, W=1200, H=800, seed=7, labels=None):
         d.rounded_rectangle(anywhere, 14, fill=(244, 228, 192, 120), outline=(84, 52, 30, 255), width=3)
         f = ImageFont.truetype(FONT, 26)
         d.text((x0 + 16, y0 + 10), "Anywhere", fill=(70, 36, 20, 255), font=f)
+        for name, px, py in anywhere_pins:                                   # a small drawing above each pin
+            badge(d, name, px, py - 40)
 
     big = ImageFont.truetype(FONT, 34)
     for region, box in boxes.items():                                       # region names on a paper label

@@ -50,7 +50,7 @@ class TestManyTraps(RDRTestBase):
 
 
 class TestBeta21Features(RDRTestBase):
-    options = {"bounty_checks": 20, "trap_link": True, "lightning_storm_trap_weight": 50, "trap_percentage": 50,
+    options = {"bounty_checks": 20, "lightning_storm_trap_weight": 50, "trap_percentage": 50,
                "found_item_popups": False, "popup_sounds": False}
 
     def test_bounties_in_seed(self):
@@ -60,7 +60,7 @@ class TestBeta21Features(RDRTestBase):
 
     def test_slot_data(self):
         data = self.world.fill_slot_data()
-        self.assertTrue(data["trap_link"])
+        self.assertNotIn("trap_link", data)
         self.assertFalse(data["found_item_popups"])
         self.assertIn("Lightning Storm Trap", data["trap_weights"])
 
@@ -72,3 +72,80 @@ class TestNoBounties(RDRTestBase):
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
         self.assertFalse(any(n.startswith("Bounty ") and n[7:].isdigit() for n in names))  # not "Bounty Hunters: 5 Kills"
 
+
+
+class TestNoHerbert(RDRTestBase):
+    options = {"trap_percentage": 100}
+
+    def test_herbert_never_placed(self):
+        items = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        self.assertTrue(any("Trap" in n for n in items))
+        self.assertNotIn("Herbert Moon Trap", items)
+        self.assertNotIn("Herbert Moon Trap", self.world.fill_slot_data()["trap_weights"])
+
+
+class TestRickettsNeedsTargetPainting(RDRTestBase):
+    options = {"weapon_mode": "vanilla"}
+
+    def test_gunslinger_needs_dead_eye_3(self):
+        self.collect_all_but(["Progressive Dead Eye"])
+        dead_eye = self.get_items_by_name("Progressive Dead Eye")
+        self.collect(dead_eye[:2])
+        self.assertTrue(self.can_reach_location("Civilization, At Any Price"))   # rest of Mexico: Dead Eye 1
+        self.assertFalse(self.can_reach_location("The Gunslinger's Tragedy"))
+        self.assertFalse(self.can_reach_location("Cowards Die Many Times"))      # comes after Landon's missions
+        self.collect(dead_eye[2:3])
+        self.assertTrue(self.can_reach_location("The Gunslinger's Tragedy"))
+        self.assertTrue(self.can_reach_location("Cowards Die Many Times"))
+
+
+class TestDuelTrap(RDRTestBase):
+    options = {"trap_percentage": 100, "duel_trap_weight": 50}
+
+    def test_duel_trap_in_pool(self):
+        from ..Items import item_table
+        items = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        self.assertIn("Duel Trap", items)
+        self.assertEqual(self.world.fill_slot_data()["trap_weights"]["Duel Trap"], 50)
+        # ids are append-only: the duel trap comes after the consumables
+        self.assertGreater(item_table["Duel Trap"].code, item_table["Chewing Tobacco"].code)
+
+
+class TestDuelTrapOff(RDRTestBase):
+    options = {"trap_percentage": 100, "duel_trap_weight": 0}
+
+    def test_no_duel_trap_at_weight_0(self):
+        items = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        self.assertNotIn("Duel Trap", items)
+
+
+class TestRebelKillsAfterReyes(RDRTestBase):
+    options = {"weapon_mode": "vanilla", "gang_kill_checks": 5}
+
+    def test_rebel_kills_need_dead_eye_3(self):
+        self.collect_all_but(["Progressive Dead Eye"])
+        dead_eye = self.get_items_by_name("Progressive Dead Eye")
+        self.collect(dead_eye[:2])
+        self.assertTrue(self.can_reach_location("Banditos: 5 Kills"))
+        self.assertFalse(self.can_reach_location("Reyes' Rebels: 5 Kills"))
+        self.collect(dead_eye[2:3])
+        self.assertTrue(self.can_reach_location("Reyes' Rebels: 5 Kills"))
+
+
+class TestRanks(RDRTestBase):
+    options = {"fame_ranks": True, "honor_ranks": "bad"}
+
+    def test_rank_locations(self):
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertIn("Fame Rank: Legend", names)
+        self.assertIn("Honor Rank: Desperado", names)
+        self.assertNotIn("Honor Rank: Hero", names)
+        self.assertEqual(self.world.fill_slot_data()["honor_ranks"], "bad")
+
+
+class TestRanksOff(RDRTestBase):
+    options = {"fame_ranks": False, "honor_ranks": "off"}
+
+    def test_no_rank_locations(self):
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertFalse(any(n.startswith(("Fame Rank", "Honor Rank")) for n in names))

@@ -20,10 +20,11 @@ from worlds.rdr1.Items import item_table
 from worlds.rdr1.Locations import location_table
 
 OUT = sys.argv[1]
-VERSION = "0.3.1"
+VERSION = "0.5.0"
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
-CHAPTER_DE = {c[0]: c[3] for c in CLUSTERS}
+from worlds.rdr1.Data import CHAPTER_DEAD_EYE
+CHAPTER_DE = dict(CHAPTER_DEAD_EYE)
 AREA_DE = {area: CHAPTER_DE[chapter] for area, chapter in AREA_GATES.items()}
 
 
@@ -37,7 +38,7 @@ def region_of(area: str) -> str:
     de = CHAPTER_DE[area]
     chapters = [c[0] for c in CLUSTERS]
     i = chapters.index(area)
-    if i < chapters.index("Crossing the Border"):
+    if i <= chapters.index("Crossing the Border"):    # the raft to Mexico still starts in New Austin
         return "New Austin"
     if i < chapters.index("Ross's Offer"):
         return "Nuevo Paraiso"
@@ -95,9 +96,18 @@ for o in OUTFITS:
     item_mapping[item_table[o].code] = [c, "toggle"]
     grid_outfits.append(c)
 
+# The story opens the territories: Mexico after "We Shall Be Together in Paradise", West Elizabeth after "An Appointed Time"
+# (tester 2026-11-05: Mexico showed as available before the raft mission). Two toggles, set by auto-tracking when that
+# mission is checked; without auto-tracking, click them yourself.
+AREA_OPEN = {"Nuevo Paraiso": ("mexico_open", "Mexico Open", "We Shall Be Together in Paradise", "MX", (196, 120, 60, 255)),
+             "West Elizabeth": ("we_open", "West Elizabeth Open", "An Appointed Time", "WE", (70, 120, 70, 255))}
+for c, nm, mission, label, color in AREA_OPEN.values():
+    items.append({"name": nm, "type": "toggle", "img": f"images/items/{c}.png", "codes": c})
+    icon(os.path.join(OUT, f"images/items/{c}.png"), label, color)
+
 # hidden option counters, set from slot_data (they hide checks that are not in the seed)
 SETTINGS = {"opt_strangers": 1, "opt_hideouts": 1, "opt_shops": 1, "opt_gangkills": 10, "opt_hattricks": 15,
-            "opt_minigames": 5, "opt_bounties": 20}
+            "opt_minigames": 5, "opt_bounties": 20, "opt_fame": 1, "opt_honor_good": 1, "opt_honor_bad": 1}
 for c, mx in SETTINGS.items():
     items.append({"name": c, "type": "consumable", "img": "images/items/deadeye.png", "codes": c, "max_quantity": mx})
 
@@ -109,18 +119,19 @@ W, H = 1200, 800
 REGION_BOX = {"West Elizabeth": (40, 40, 560, 380), "New Austin": (40, 420, 700, 760), "Nuevo Paraiso": (740, 420, 1160, 760),
               "Anywhere": (600, 215, 1000, 385)}
 REGION_LABEL = {"Nuevo Paraiso": "Mexico"}        # shown on the map and in pin names
-ANYWHERE = {"hat_trick", "minigame"}              # checks that are not tied to one territory
+ANYWHERE = {"hat_trick", "minigame", "bounty", "rank"}    # checks that are not tied to one territory (bounties count in the order
+                                                  # you finish them; Bounty 9+ still need Mexico's Dead Eye in logic)
 REGION_COLOR = {"West Elizabeth": (60, 90, 50, 255), "New Austin": (150, 105, 55, 255), "Nuevo Paraiso": (170, 80, 40, 255)}
-rdr_icons.draw_map(os.path.join(OUT, "images/maps/map.png"), REGION_BOX, W, H, labels=REGION_LABEL)
 with open(os.path.join(OUT, "maps/maps.json"), "w") as f:
     json.dump([{"name": "Map", "location_size": 36, "location_border_thickness": 3, "img": "images/maps/map.png"}], f, indent=1)
 
 # ---------------------------------------------------------------- locations
 CATEGORY_LABEL = {"story": "Story", "stranger": "Strangers", "hideout": "Hideouts", "gang_kill": "Gang Kills",
-                  "hat_trick": "Hat Tricks", "minigame": "Minigames", "bounty": "Bounties", "shop": "Shops"}
+                  "hat_trick": "Hat Tricks", "minigame": "Minigames", "bounty": "Bounties", "shop": "Shops", "rank": "Ranks"}
 VIS = {"stranger": lambda d: ["opt_strangers"], "hideout": lambda d: ["opt_hideouts"], "shop": lambda d: ["opt_shops"],
        "gang_kill": lambda d: [f"opt_gangkills:{d.index}"], "hat_trick": lambda d: [f"opt_hattricks:{d.index}"],
-       "minigame": lambda d: [f"opt_minigames:{d.index}"], "bounty": lambda d: [f"opt_bounties:{d.index}"]}
+       "minigame": lambda d: [f"opt_minigames:{d.index}"], "bounty": lambda d: [f"opt_bounties:{d.index}"],
+       "rank": lambda d: [{"fame": "opt_fame", "honor_good": "opt_honor_good", "honor_bad": "opt_honor_bad"}[d.group]]}
 
 pins = {}
 location_mapping = {}
@@ -128,14 +139,19 @@ for name, data in location_table.items():
     if data.category not in CATEGORY_LABEL:
         continue
     region = "Anywhere" if data.category in ANYWHERE else region_of(data.area)
+    if data.category == "gang_kill" and data.group == "Reyes' Rebels":   # in logic after An Appointed Time, but in Mexico
+        region = "Nuevo Paraiso"
     if data.category == "hideout":                     # every hideout is its own pin, named after the hideout
         pin = f"{REGION_LABEL.get(region, region)} - {data.group}"
     else:
         pin = f"{REGION_LABEL.get(region, region)} - {CATEGORY_LABEL[data.category]}"
     de = dead_eye_for(data.area)
     section = {"name": name, "item_count": 1}
-    if de:
-        section["access_rules"] = [f"deadeye:{de}"]
+    rule = ([f"deadeye:{de}"] if de else []) + ([AREA_OPEN[region][0]] if region in AREA_OPEN else [])
+    if data.category == "gang_kill" and data.group == "Reyes' Rebels":
+        rule.append("we_open")   # the story mission that sets "West Elizabeth Open" is An Appointed Time
+    if rule:
+        section["access_rules"] = [",".join(rule)]
     if data.category in VIS:
         section["visibility_rules"] = VIS[data.category](data)
     pins.setdefault(pin, (region, data.category, []))[2].append(section)
@@ -148,13 +164,19 @@ for pin, (region, cat, sections) in sorted(pins.items(), key=lambda kv: kv[1][1]
     per_region[region] = n + 1
     box = REGION_BOX[region]
     if region == "Anywhere":
-        x = box[0] + 100 + n * 200
+        x = box[0] + 62 + n * 92
         y = box[1] + 95
     else:
         cols = 4 if box[2] - box[0] > 500 else 3
         x = box[0] + 80 + (n % cols) * ((box[2] - box[0] - 160) // (cols - 1))
         y = box[1] + 95 + (n // cols) * 98
     children.append({"name": pin, "map_locations": [{"map": "Map", "x": int(x), "y": int(y)}], "sections": sections})
+
+# the map picture is drawn once the pins are placed, so trees, cacti and huts stay clear of the pins and their labels
+rdr_icons.draw_map(os.path.join(OUT, "images/maps/map.png"), REGION_BOX, W, H, labels=REGION_LABEL,
+                   keepout=[(c["map_locations"][0]["x"], c["map_locations"][0]["y"]) for c in children],
+                   anywhere_pins=[(c["name"].split(" - ", 1)[1], c["map_locations"][0]["x"], c["map_locations"][0]["y"])
+                                  for c in children if c["name"].startswith("Anywhere - ")])
 
 # label every pin on the map picture
 img = Image.open(os.path.join(OUT, "images/maps/map.png"))
@@ -188,6 +210,7 @@ def grid_of(codes, per_row=6):
 
 grid = {"type": "array", "orientation": "vertical", "margin": "0,0", "content": [
     {"type": "group", "header": "Dead Eye", "content": grid_of([f"deadeye_{lv}" for lv in range(1, 5)], 4)},
+    {"type": "group", "header": "Territories", "content": grid_of([v[0] for v in AREA_OPEN.values()], 4)},
     {"type": "group", "header": "Guns", "content": grid_of(guns)},
     {"type": "group", "header": "Throwables", "content": grid_of(throw, 4)},
     {"type": "group", "header": "Outfits", "content": grid_of(grid_outfits)},
@@ -215,6 +238,7 @@ with open(os.path.join(OUT, "scripts/autotracking/item_mapping.lua"), "w") as f:
     f.write("ITEM_MAPPING = " + lua_table(item_mapping) + "\n")
 with open(os.path.join(OUT, "scripts/autotracking/location_mapping.lua"), "w") as f:
     f.write("LOCATION_MAPPING = " + lua_table(location_mapping) + "\n")
+    f.write("AREA_OPEN_BY_LOCATION = {\n" + "".join(f'  [{location_table[m].code}] = "{c}",\n' for c, nm, m, l, col in AREA_OPEN.values()) + "}\n")
 
 with open(os.path.join(OUT, "scripts/init.lua"), "w") as f:
     f.write('''Tracker:AddItems("items/items.json")
@@ -250,6 +274,10 @@ function onClear(slot_data)
     local obj = Tracker:FindObjectForCode("deadeye_" .. lv)
     if obj then obj.Active = false end
   end
+  for _, c in pairs(AREA_OPEN_BY_LOCATION) do
+    local obj = Tracker:FindObjectForCode(c)
+    if obj then obj.Active = false end
+  end
   slot_data = slot_data or {}
   local function flag(key, default) local v = slot_data[key]; if v == nil then return default end; return v and v ~= 0 end
   set_count("opt_strangers", flag("include_stranger_missions", true) and 1 or 0)
@@ -259,6 +287,9 @@ function onClear(slot_data)
   set_count("opt_hattricks", slot_data["hat_tricks"] or 5)
   set_count("opt_minigames", slot_data["minigame_wins"] or 3)
   set_count("opt_bounties", slot_data["bounty_checks"] or 0)
+  set_count("opt_fame", flag("fame_ranks", false) and 1 or 0)
+  set_count("opt_honor_good", slot_data["honor_ranks"] == "good" and 1 or 0)
+  set_count("opt_honor_bad", slot_data["honor_ranks"] == "bad" and 1 or 0)
 end
 
 function onItem(index, item_id, item_name, player_number)
@@ -275,6 +306,11 @@ function onItem(index, item_id, item_name, player_number)
 end
 
 function onLocation(location_id, location_name)
+  local open = AREA_OPEN_BY_LOCATION[location_id]   -- the story mission that opens Mexico / West Elizabeth
+  if open then
+    local t = Tracker:FindObjectForCode(open)
+    if t then t.Active = true end
+  end
   local v = LOCATION_MAPPING[location_id]
   if not v then return end
   local obj = Tracker:FindObjectForCode(v[1])

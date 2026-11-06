@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from Options import Choice, DeathLink, DefaultOnToggle, OptionGroup, PerGameCommonOptions, Range, Toggle
+from Options import Choice, DeathLink, DefaultOnToggle, OptionGroup, PerGameCommonOptions, Range
 
 from .Data import MAX_BOUNTY_CHECKS, MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS
 
@@ -30,7 +30,7 @@ class WeaponMode(Choice):
 
 
 class IncludeStrangerMissions(DefaultOnToggle):
-    """Completing each stranger mission is a check."""
+    """Finishing each stranger's whole story is a check (sent when the story ends)."""
     display_name = "Include Stranger Missions"
 
 
@@ -57,7 +57,8 @@ class HatTricks(Range):
 
 
 class MinigameWins(Range):
-    """Number of wins that count as checks for each minigame (poker, blackjack, duels, etc). 0 disables them. A won hand / game / duel counts once."""
+    """Number of win checks for each minigame (poker, blackjack, liar's dice, five finger fillet, horseshoes, arm wrestling,
+    duels). 0 disables them. Each won hand, game or duel sends the next win check."""
     display_name = "Minigame Win Checks"
     range_start = 0
     range_end = MAX_MINIGAME_WINS
@@ -73,6 +74,21 @@ class BountyChecks(Range):
     default = 5
 
 
+class FameRanks(DefaultOnToggle):
+    """Reaching each fame title is a check: Greenhorn, Buckaroo, Mercenary, Gunslinger and Legend."""
+    display_name = "Fame Rank Checks"
+
+
+class HonorRanks(Choice):
+    """Reaching honor titles is a check. good: Honest Joe, Peacemaker, Hero. bad: Rustler, Road Agent, Desperado (play an
+    outlaw). off: none."""
+    display_name = "Honor Rank Checks"
+    option_off = 0
+    option_good = 1
+    option_bad = 2
+    default = 1
+
+
 class IncludeShops(DefaultOnToggle):
     """Buying gear, maps, guns and tailor items in the general stores, gunsmiths and tailors of every town is a check (one check per item, buy it in
     any store that has it). Horse deeds are blocked; consumables are left alone."""
@@ -80,7 +96,8 @@ class IncludeShops(DefaultOnToggle):
 
 
 class IncludeOutfits(DefaultOnToggle):
-    """Outfits are sent to you as items (each one once). Purely cosmetic."""
+    """Outfits are sent to you as items (each one once). Purely cosmetic. Outfits you get any other way (bought in a shop,
+    given by the game) are taken away again. The three law uniforms are put on with F10 in game."""
     display_name = "Include Outfits"
 
 
@@ -93,12 +110,6 @@ class FoundItemPopups(DefaultOnToggle):
 class PopupSounds(DefaultOnToggle):
     """Play a game sound with item pop-ups and trap warnings."""
     display_name = "Pop-up Sounds"
-
-
-class TrapLink(Toggle):
-    """TrapLink: every trap you receive is also sent to the other TrapLink players, and their traps can reach you
-    (matched to a similar Red Dead trap, or a random one)."""
-    display_name = "TrapLink"
 
 
 class TrapPercentage(Range):
@@ -149,19 +160,11 @@ class StampedeTrapWeight(Range):
 
 
 class OutOfBulletsTrapWeight(Range):
-    """Relative weight of the out of bullets trap (empties your ammo)."""
+    """Relative weight of the out of bullets trap (empties your ammo; half of it comes back after 20 seconds)."""
     display_name = "Out of Bullets Trap Weight"
     range_start = 0
     range_end = 100
     default = 8
-
-
-class HerbertMoonTrapWeight(Range):
-    """Relative weight of the Herbert Moon trap ("Herbert Moon speaks sweet nothings into your ear...")."""
-    display_name = "Herbert Moon Trap Weight"
-    range_start = 0
-    range_end = 100
-    default = 6
 
 
 class PosseTrapWeight(Range):
@@ -174,11 +177,20 @@ class PosseTrapWeight(Range):
 
 
 class LightningStormTrapWeight(Range):
-    """Relative weight of the lightning storm trap (a storm rolls in, three lightning strikes land close to John)."""
+    """Relative weight of the lightning trap (three lightning strikes land close to John: keep moving)."""
     display_name = "Lightning Storm Trap Weight"
     range_start = 0
     range_end = 100
     default = 6
+
+
+class DuelTrapWeight(Range):
+    """Relative weight of the duel trap ("A Challenger Approaches..."): a gunman calls you out and the game's duel starts.
+    Win and it counts as a duel win; lose and you die (DeathLink sends it on). The trap waits until you are on foot."""
+    display_name = "Duel Trap Weight"
+    range_start = 0
+    range_end = 100
+    default = 5
 
 
 class DeadEyeDrainTrapWeight(Range):
@@ -199,6 +211,8 @@ class RDROptions(PerGameCommonOptions):
     hat_tricks: HatTricks
     minigame_wins: MinigameWins
     bounty_checks: BountyChecks
+    fame_ranks: FameRanks
+    honor_ranks: HonorRanks
     include_shops: IncludeShops
     include_outfits: IncludeOutfits
     trap_percentage: TrapPercentage
@@ -210,11 +224,10 @@ class RDROptions(PerGameCommonOptions):
     stampede_trap_weight: StampedeTrapWeight
     out_of_bullets_trap_weight: OutOfBulletsTrapWeight
     posse_trap_weight: PosseTrapWeight
-    herbert_moon_trap_weight: HerbertMoonTrapWeight
     lightning_storm_trap_weight: LightningStormTrapWeight
+    duel_trap_weight: DuelTrapWeight
     found_item_popups: FoundItemPopups
     popup_sounds: PopupSounds
-    trap_link: TrapLink
     death_link: DeathLink
 
 
@@ -222,11 +235,11 @@ class RDROptions(PerGameCommonOptions):
 rdr_option_groups = [
     OptionGroup("Goal and Weapons", [Goal, WeaponMode]),
     OptionGroup("Checks", [IncludeStrangerMissions, IncludeGangHideouts, GangKillChecks, HatTricks, MinigameWins,
-                           BountyChecks, IncludeShops]),
+                           BountyChecks, FameRanks, HonorRanks, IncludeShops]),
     OptionGroup("Items", [IncludeOutfits]),
     OptionGroup("Traps", [TrapPercentage, AnimalTrapWeight, GangTrapWeight, PosseTrapWeight, StampedeTrapWeight,
-                          DrunkTrapWeight, SlowMotionTrapWeight, OutOfBulletsTrapWeight, HerbertMoonTrapWeight,
-                          LightningStormTrapWeight, DeadEyeDrainTrapWeight]),
+                          DrunkTrapWeight, SlowMotionTrapWeight, OutOfBulletsTrapWeight,
+                          LightningStormTrapWeight, DuelTrapWeight, DeadEyeDrainTrapWeight]),
     OptionGroup("Pop-ups", [FoundItemPopups, PopupSounds]),
-    OptionGroup("Multiplayer", [DeathLink, TrapLink]),
+    OptionGroup("Multiplayer", [DeathLink]),
 ]

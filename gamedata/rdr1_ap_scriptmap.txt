@@ -7,8 +7,8 @@ fbi04|mission|And You Will Know the Truth|The Truth|1|low
 fbi05|mission|Bear One Another's Burdens|Ross's Offer|1|low
 fort01|mission|The Assault on Fort Mercer|Assault on Fort Mercer|1|high
 fort02|mission|We Shall Be Together in Paradise|Crossing the Border|1|medium
-grave01|mission|Spare the Rod, Spoil the Bandit|Armadillo Law|1|medium
-grave02|mission|Exhuming and Other Fine Hobbies|Seth's Graveyard|1|medium
+grave01|mission|Exhuming and Other Fine Hobbies|Seth's Graveyard|1|confirmed
+grave02|mission|A Gentle Drive with Friends|Seth's Graveyard|1|confirmed
 grave03|mission|Let the Dead Bury Their Dead|Seth's Graveyard|1|high
 gun01|mission|The Gunslinger's Tragedy|Landon Ricketts|1|high
 gun02|mission|The Mexican Wagon Train|Landon Ricketts|1|medium

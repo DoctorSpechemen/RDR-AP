@@ -2,9 +2,18 @@
 <img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
-Claude AI Assisted in creating this project about 70%. The rest was cleanup by me and testing by me. AI is close to being very impressive but still overlooks very simple things and issues. 
+**Beta 3.0.** APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
-**Pre-release Beta 2.2.** APWorld + RedHook plugin (v6.3) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
+> [!CAUTION]
+> This is a beta. The client swaps your save files while you play and backs up your normal saves automatically
+> (`rdr1_ap_saves\_backups` in the game folder), but **make your own backup of your saves before the first run**.
+> Your saves are the `RDR2SAVE*.SAV` files in `Documents\Rockstar Games\Red Dead Redemption\Profiles\<your id>\`.
+
+## Disclaimer
+> [!IMPORTANT]
+> This project was made with AI assistance: Claude AI wrote about 70% of it. The rest was cleanup and testing by me. AI is
+> close to being very impressive but still overlooks very simple things and issues, so please report anything that looks
+> wrong.
 
 ## What you need
 - Red Dead Redemption (PC, Steam) and [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) 0.5.0 or newer.
@@ -14,8 +23,11 @@ Claude AI Assisted in creating this project about 70%. The rest was cleanup by m
   folder, next to `RDR.exe`) and `rdr1.apworld` (Archipelago Launcher > **Install APWorld**).
 
 ## Turn off cloud saves (do this once)
+> [!WARNING]
+> Leaving cloud saves on can put your normal saves back over the Archipelago ones (or the other way around).
+
 The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
-Turn them off so the cloud does not put your normal saves back over the Archipelago ones (or the other way around):
+Turn them off:
 1. Start the game and wait for the Rockstar Games Launcher overlay to finish loading.
 2. Press **Home** (on a controller: **Back/View + RB**) to open the overlay.
 3. Click the **gear icon** next to your username (top right), then **Settings > Game Settings**, and turn **Cloud Saves** off.
@@ -28,78 +40,72 @@ The setting has been reported to switch itself back on for some players, so chec
 2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. After you enter your slot name the client
    can hang for a second or two: that is normal, it is moving your save files into place. `/gamedir <path>` if the game is not in
    the default Steam folder.
-3. Start the game **after** connecting. The client swaps in this multiworld's own saves (start a NEW GAME the first time).
+3. Start the game **after** connecting. The client swaps in this multiworld's own saves.
 4. Play.
 
-  ** P.S. Upon finishing up a session, close the game first, then the client: your normal saves come back automatically.**
+> [!WARNING]
+> When you finish a session, **close the game first, then the client**: your normal saves come back automatically. Close the
+> game before replacing `RDR-AP.red` with a new version too.
 
 ## Features
 - **Story missions play in the vanilla order.** Nothing is locked: every story mission you finish sends a check.
 - **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first one is sent.
+  Landon Ricketts' missions need target painting (level 3): the first one teaches it and can't be finished without it, so
+  logic never expects Landon's missions, or the story after them, before level 3, and the game won't let you start his first
+  mission until you have it.
 - **Weapons are items** (Cattleman start, random start or vanilla pickups).
     - Cattleman Start, you start with the cattleman and get sent random weapons from items
     - Random Start, you start with a random weapon and get sent random weapons from items
     - Vanilla Pickups, vanilla experience
-- **Outfits are items** (13, cosmetic). Not included: the US Marshal, US Army and Bureau uniforms (the game itself keeps
-  them locked until late in the story) and Gentleman's Attire (every PC copy already has it).
-- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50 (cash, fame and honor are given again if
-  a checkpoint reload takes them back), and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
+- **Outfits are items** (16, cosmetic), including the US Marshal, US Army and Bureau uniforms: the game normally locks those
+  three until late in the story, but once received they can be picked in the pause menu like any other outfit. Gentleman's
+  Attire is not an item (every PC copy already has it).
+- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50, and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
   Chewing Tobacco.
 - **Traps** (every trap shows one big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
-  stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), Herbert Moon, lightning
-  (three strikes land close to you, keep moving), Dead Eye drain.
+  stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), lightning
+  (three strikes land close to you, keep moving), Dead Eye drain, and the **duel trap** ("A Challenger Approaches...": a
+  gunman calls you out and the game's own duel starts. Win it and it counts as a duel win; lose it and you die, DeathLink
+  included). It waits until you are on foot.
 - **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things.
-- **TrapLink**: traps are shared with other TrapLink games; their traps become the closest Red Dead trap.
-- **"Found X for Player"** line at the bottom of the screen when one of your checks sends an item to someone else, and
-  **sounds** with item pop-ups and trap warnings (both can be turned off in the YAML).
-- **F9 tally** in game: checks done / total per category, items received, cash received and every trap you survived.
 - A **PopTracker pack** (`RDR-AP_PopTracker.zip`) that tracks your checks and items automatically.
 - **A separate save per multiworld**, and the mod's own progress per multiworld (`rdr1_ap_seeds\<seed>\`).
-- Big centred pop-ups for every received item.
 
 ## What sends a check
 | Category | Check | Count |
 |---|---|---|
 | Story missions | finishing the mission | 57 |
 | Stranger missions | finishing each stranger's whole story (sent when the story ends) | 18 |
-| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not | up to 90 |
+| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not. Reyes' Rebels only become enemies after "An Appointed Time" (they are Mexico's law then), so logic expects those kills after it | up to 90 |
 | Gang hideouts | clearing Pike's Basin, Twin Rocks, Fort Mercer, Tumbleweed, Gaptooth Breach, Nosalida, Tesoro Azul | 7 |
 | Hat tricks | shooting a hat off someone without killing them | up to 15 |
 | Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels | up to 5 each |
 | Bounties | turning in wanted-poster bounties, dead or alive, counted in the order you finish them ("Bounty 1", "Bounty 2", ...) | up to 20 |
-| Shops | gear, maps, guns and tailor items in every general store, gunsmith and tailor (one check per item, buy it in any store that has it) | 30 |
+| Fame ranks | reaching Greenhorn, Buckaroo, Mercenary, Gunslinger and Legend | 5 |
+| Honor ranks | reaching Honest Joe, Peacemaker and Hero, or (your choice in the YAML) Rustler, Road Agent and Desperado | 3 |
+| Shops | gear, maps, guns and tailor items in every general store, gunsmith and tailor (one check per item, buy it in any store that has it) | 32 |
 
 ## What is not allowed / not counted
 - Guns and gear you pick up or buy without having received them from Archipelago are taken away after 5 seconds
   ("That weapon isn't yours to keep."). Thrown weapons, the knife and the lasso are never taken. (Not in vanilla weapon mode.)
-- Horse deeds are blocked in every store. Horses are not part of the randomizer.
+- Outfits work the same way: an outfit you own without receiving it from Archipelago is taken away again ("That outfit isn't yours to keep."). 
+  John's own clothes and Gentleman's Attire are never taken. 
+- Horse deeds are blocked in every store. Horses are not part of the randomizer as of this moment since everyone has War Horse.
 - Things you already found are blocked in every shop, so nothing is bought twice.
-- Consumables (food, medicine, ammo, tonics) are left alone.
-- Not tracked (yet): random encounters, fame/honor milestones, ambient challenges, treasure map
-  treasure, the Buffalo Rifle (needs Master Hunter 5).
+- Consumables (food, medicine, ammo, tonics) are left alone and are vanilla purchases, no checks tied to them
+- Not tracked (yet): random encounters, ambient challenges, treasure map treasure, challenges
 
 ## In-game keys
-- **F9**: Archipelago tally (stays up 30 seconds, press F9 again to close it): checks done / total for each category, all
-  checks, items received, cash received and the traps you survived (needs the client connected for the totals). Gang kill
-  and hat trick counters stop showing once you reach the limit set in your YAML.
-
-## If a check did not send
-- **In the client:** type `/resync`. Everything the game has found is sent to the server again (safe any time; repeats are
-  ignored).
-- **In the game:** if the game never noticed the check (for example a mission whose name could not be matched), open
-  `rdr1_ap_in.txt` in the game folder (create it if it is missing), write `sendcheck ` followed by the exact location name,
-  and save. Example: `sendcheck A Gentle Drive with Friends`. The game reads the file within a second.
+- **F9**: Archipelago tally (stays up 30 seconds, press F9 again to close it): Everything you've done with what is required by the Archipelago. 
 
 ## PopTracker
 Install [PopTracker](https://github.com/black-sliver/PopTracker/releases) 0.18 or newer, put `RDR-AP_PopTracker.zip` in its
-`packs` folder, open it and click the **AP** button to connect with your slot name. Checks that are not in your seed are
-hidden; grey checks need more Dead Eye in logic. Checks someone hinted for you are highlighted (needs a recent PopTracker).
+`packs` folder, open it and click the **AP** button to connect with your slot name.
 
 ## Known beta issues
-- Some story mission names are matched from script contents and may be wrong. Report the real title of any wrong check.
-  ("A Gentle Drive with Friends" has no script of its own; the plugin sends it when a story mission it cannot identify ends.)
-- Herbert Moon's voice lines have not been heard in game yet (the trap shows its warning; the voice is being worked on).
-- Keep Rockstar cloud saves off while using the save swap (see "Turn off cloud saves").
+- The rank cut-offs for Gunslinger, Legend, Hero and the bad honor ranks are best guesses from the ranks seen in play; the
+  check may send a little before or after the game's own rank pop-up.
+- Not seen in play yet: West Elizabeth (story, strangers, hideouts, shops) and the full-story goal ("Remember My Family").
 
 ## Credits
 This randomizer is built on the work of these projects and their authors. Thank you!

@@ -3,7 +3,8 @@ from typing import Dict, NamedTuple
 from BaseClasses import Location
 
 from .Data import (BASE_ID, BOUNTIES, CHALLENGES, CLUSTERS, GAME_NAME, GANG_FACTIONS, HIDEOUTS, MAX_CHALLENGE_RANKS,
-                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MAX_BOUNTY_CHECKS, MINIGAMES, SHOP_LOCATIONS, STRANGERS)
+                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MAX_BOUNTY_CHECKS, MINIGAMES, SHOP_LOCATIONS, LATE_SHOP_LOCATIONS, STRANGERS,
+                   FAME_RANKS, GOOD_HONOR_RANKS, BAD_HONOR_RANKS)
 
 
 class RDRLocation(Location):
@@ -57,6 +58,16 @@ def _build() -> Dict[str, LocData]:
     # Beta 2.1: bounties in the order they are completed
     for i in range(1, MAX_BOUNTY_CHECKS + 1):
         add(f"Bounty {i}", "bounty", "New Austin" if i <= 8 else ("Nuevo Paraiso" if i <= 16 else "West Elizabeth"), i)
+    # Beta 3.0: Bandito and Rebel scraps
+    for name, area in LATE_SHOP_LOCATIONS.items():
+        add(name, "shop", area)
+    # Beta 3.0: fame and honor ranks (group = fame / honor_good / honor_bad)
+    for name, (_cut, area) in FAME_RANKS.items():
+        add(f"Fame Rank: {name}", "rank", area, 0, "fame")
+    for name, (_cut, area) in GOOD_HONOR_RANKS.items():
+        add(f"Honor Rank: {name}", "rank", area, 0, "honor_good")
+    for name, (_cut, area) in BAD_HONOR_RANKS.items():
+        add(f"Honor Rank: {name}", "rank", area, 0, "honor_bad")
     return table
 
 

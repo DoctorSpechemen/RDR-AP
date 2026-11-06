@@ -1,8 +1,8 @@
 """Static game data for the Red Dead Redemption (RDR1) APWorld.
 
 Everything that describes the game lives here so it can be corrected without touching
-generation logic. Items marked DRAFT were written from memory / secondary sources and
-should be verified in-game before the first public release.
+generation logic. Ids are append-only: removed items and locations keep their ids reserved
+so older seeds still read.
 """
 
 GAME_NAME = "Red Dead Redemption"
@@ -16,8 +16,8 @@ BASE_ID = 8_200_000
 # A chapter only sets the Dead Eye level logic expects by that point of the story (pacing); the game itself decides
 # which mission comes next. Chapters were progression items before beta 1.
 #
-# DRAFT: the grouping follows the story order from ireddead.com's mission list. The exact
-# unlock/branch order in the game still has to be confirmed (see README notes).
+# The grouping follows the story order from ireddead.com's mission list, checked against a full playthrough
+# (Beta 3.0). Landon Ricketts' chapter needs Dead Eye 3: his first mission teaches target painting.
 CLUSTERS = [
     ("Armadillo Arrival",
      ["Exodus in America", "New Friends, Old Problems", "Obstacles in Our Path", "This is Armadillo, USA"],
@@ -52,7 +52,7 @@ CLUSTERS = [
      ["Crossing the Border"], 1),
     ("Landon Ricketts",
      ["The Gunslinger's Tragedy", "Landon Ricketts Rides Again", "Lucky in Love", "The Mexican Wagon Train"],
-     ["Crossing the Border"], 1),
+     ["Crossing the Border"], 3),   # Beta 3.0: Landon's first mission teaches target painting (Dead Eye 3) and needs it
     ("Fortuna's Rebels",
      ["My Sister's Keeper", "Must a Savior Die?"],
      ["Crossing the Border"], 1),
@@ -86,10 +86,15 @@ CLUSTERS = [
 ]
 
 CLUSTER_NAMES = [c[0] for c in CLUSTERS]
-START_CLUSTER = "Armadillo Arrival"
+
+# Dead Eye a chapter needs in logic: its own level, and never less than any chapter it follows (the story is played in order,
+# so a chapter locked behind Landon Ricketts' Dead Eye 3 locks everything after it too). CLUSTERS is in story order.
+CHAPTER_DEAD_EYE = {}
+for _name, _missions, _after, _dead_eye in CLUSTERS:
+    CHAPTER_DEAD_EYE[_name] = max([_dead_eye] + [CHAPTER_DEAD_EYE[a] for a in _after])
 FINAL_CLUSTER = "The Last Enemy"
 
-# Progressive Dead Eye upgrades. DRAFT: level count and gating are a design choice.
+# Progressive Dead Eye: 1 Dead Eye, 2 auto lock-on, 3 target painting, 4 fast recovery (the plugin sets the game's flags).
 DEAD_EYE_ITEM = "Progressive Dead Eye"
 DEAD_EYE_LEVELS = 4
 
@@ -117,21 +122,22 @@ STRANGERS = {
 }
 
 # ---------------------------------------------------------------------------------------
-# Gang hideouts. Each hideout gets one "cleared" check plus up to MAX_GANG_KILLS kill checks.
-# (Gang names intentionally not used: one gang per hideout.)
+# Gang hideouts: one "cleared" check each (the hideout's best-time stat). Gang kills are counted per gang, below.
 # ---------------------------------------------------------------------------------------
 HIDEOUTS = {
     "New Austin": ["Pike's Basin", "Twin Rocks", "Fort Mercer", "Tumbleweed", "Gaptooth Breach"],
     "Nuevo Paraiso": ["Nosalida", "Tesoro Azul"],
 }
-MAX_GANG_KILLS = 10
+MAX_GANG_KILLS = 10   # kill checks per gang (one every 5 kills, up to 50)
 
 # Gang kill checks are counted per gang (the plugin reads the actor's faction id), not per hideout.
 # name -> (area, faction id from the community eFaction enum). Scripted mission enemies (faction 19) never count.
 GANG_FACTIONS = {
     "Walton's Gang": ("New Austin", 25),
     "Banditos": ("Nuevo Paraiso", 12),
-    "Reyes' Rebels": ("Nuevo Paraiso", 27),
+    # Beta 3.0: rebels are John's allies until Reyes wins; after "An Appointed Time" they are Mexico's law (a bounty brings
+    # them). So their kill checks come after that point in logic: the chapter that follows it (tester).
+    "Reyes' Rebels": ("Ross's Offer", 27),
     "Mexican Soldiers": ("Nuevo Paraiso", 16),
     "Treasure Hunters": ("West Elizabeth", 24),
     "Cattle Rustlers": ("West Elizabeth", 14),
@@ -162,11 +168,22 @@ SHOP_LOCATIONS = {
     "Shop - Bandana": "Nuevo Paraiso", "Shop - Elegant Suit": "New Austin", "Shop - Bollard Gang Scrap": "New Austin",
     "Shop - Walton's Gang Scrap": "New Austin", "Shop - Treasure Hunter Scrap": "New Austin",
 }
+# Beta 3.0: the Mexican outfit scraps (Chuparosa and Escalera general stores) are checks too (tester). Their ids come after the
+# bounties (append only). The US Military scrap stays out (the army uniform is not an item).
+LATE_SHOP_LOCATIONS = {"Shop - Bandito Scrap": "Nuevo Paraiso", "Shop - Rebel Scrap": "Nuevo Paraiso"}
 
-# Minigame wins are read from each game's "money won" stat (a win adds the winnings). Hideout clears from each hideout's
-# best-time stat. Both found in the decompiled scripts.
-# Random encounters: the game's "unique world events encountered" counter (sn_btin). Each new encounter is one check; a save
-# reload cannot count the same ones twice (the plugin keeps a high-water mark).
+# Beta 3.0: fame and honor RANK checks: reaching each title sends a check. Titles from the game's own lists (gamepressure /
+# ireddead). Cut-offs: Greenhorn 1000, Buckaroo 2000, Mercenary 4000, Honest Joe 1500 and Peacemaker 2500 were seen in play;
+# the rest follow the same pattern (fame doubles and is capped at 10000 by the game, honor steps 1000 from 1500, capped at 5000
+# either way). title -> (cut-off, logic area or chapter).
+FAME_RANKS = {"Greenhorn": (1000, "New Austin"), "Buckaroo": (2000, "New Austin"), "Mercenary": (4000, "Nuevo Paraiso"),
+              "Gunslinger": (8000, "West Elizabeth"), "Legend": (10000, "Homecoming")}
+GOOD_HONOR_RANKS = {"Honest Joe": (1500, "New Austin"), "Peacemaker": (2500, "Nuevo Paraiso"), "Hero": (3500, "West Elizabeth")}
+BAD_HONOR_RANKS = {"Rustler": (-1500, "New Austin"), "Road Agent": (-2500, "Nuevo Paraiso"), "Desperado": (-3500, "West Elizabeth")}
+
+# Minigame wins are read from each game's own stats (blackjack per hand, five finger fillet from its win objective); a win
+# sends the first "Win N" not sent yet. Found in the decompiled scripts.
+# Random encounters were removed in beta 2 (not reliable); their location ids stay reserved.
 MAX_RANDOM_ENCOUNTERS = 20
 
 # Minigames: one check per win, up to MAX_MINIGAME_WINS.
@@ -176,7 +193,7 @@ MAX_MINIGAME_WINS = 5
 # Bounties per area.
 BOUNTIES = {"New Austin": 8, "Nuevo Paraiso": 8, "West Elizabeth": 4}
 
-# Ambient challenges (Treasure Hunter is covered by the treasure map option instead).
+# Ambient challenges: removed in beta 2 (ids reserved).
 CHALLENGES = ["Survivalist", "Sharpshooter", "Master Hunter"]
 MAX_CHALLENGE_RANKS = 10
 
@@ -199,11 +216,9 @@ THROWN = ["Throwing Knives", "Fire Bottles", "Dynamite", "Tomahawk"]
 WEAPONS = GUNS + THROWN
 DEFAULT_START_WEAPON = "Cattleman Revolver"
 
-# Filler. Cash is written straight into the game's money stat and redrawn on the HUD (tested). "Dead Eye Refill" fills the meter.
-# Outfits: cosmetic items, each sent once. Name -> internal outfit name in the game's outfit table (plugin "outfitgive").
-# "Gentleman's Attire" = social is confirmed in game; the other display names are best guesses from the internal names.
-# Internal names from the game's outfit table. Matched to the wiki's outfit list: social (Gentleman's Attire) is confirmed in
-# game, gun = Deadly Assassin was seen by the tester; mount (Expert Hunter) and bruise (Savvy Merchant) are by elimination.
+# Outfits: cosmetic items, each sent once. Name -> internal name in the game's outfit table (plugin "outfitgive"). Matched to
+# the wiki's outfit list: social, gun, suit, treasur, rustler and bruise are confirmed in game, the rest by elimination.
+# The plugin takes away any pool outfit the player owns without having received it.
 OUTFITS = {
     "Outfit: Gentleman's Attire": "social", "Outfit: Deadly Assassin Outfit": "gun", "Outfit: Elegant Suit": "suit",
     "Outfit: Walton's Gang Outfit": "dnd", "Outfit: Bollard Twins Outfit": "rustler", "Outfit: Treasure Hunter Outfit": "treasur",
@@ -213,11 +228,11 @@ OUTFITS = {
     "Outfit: Expert Hunter Outfit": "mount", "Outfit: Savvy Merchant Outfit": "bruise",
 }
 
-# The pause menu takes these three away again until late in the story (pause.c: unless story mission 57 is passed, the
-# wearable bit of uslaw, military and fbi is cleared every time the menu opens), so they are not sent as items.
-# Gentleman's Attire is unlocked from the start on PC (the Social Club / Rockstar Games Launcher bonus), so it is not an item either.
-STORY_LOCKED_OUTFITS = {"Outfit: U.S. Marshal Uniform", "Outfit: U.S. Army Uniform", "Outfit: Bureau Uniform",
-                        "Outfit: Gentleman's Attire"}
+# Gentleman's Attire is unlocked from the start on PC (the Social Club / Rockstar Games Launcher bonus), so it is not an item.
+# Beta 3.0: the three law uniforms ARE items again. The pause menu still won't offer them before late in the story (pause.c:
+# unless story mission 57 is passed, it clears their "wearable" bit whenever it opens), so the plugin puts a received uniform
+# on with F10 instead, through the game's own outfit change.
+STORY_LOCKED_OUTFITS = {"Outfit: Gentleman's Attire"}
 
 # Fame / Honor +50 are back (beta 2.1): they use the two ids the old +20 items had, and the plugin gives them again if a
 # checkpoint reload takes them back (the reason they were removed in beta 2).
@@ -232,9 +247,9 @@ ALL_FILLERS = FILLER_ITEMS + list(CONSUMABLES)
 FILLER_WEIGHTS = {"Dead Eye Refill": 1}
 FILLER_DEFAULT_WEIGHT = 2
 
-# Fame / honor milestones: one check every 500 points (honor counts either way). Later milestones need later areas.
+# Fame / honor milestones: removed in beta 2 (ids reserved). Rank checks are planned for beta 3 (fame ranks every 1000,
+# honor ranks at 1500, 2500, ...).
 MAX_STAT_MILESTONES = 10
-MILESTONE_STEP = 500
 
 # Animal ambush traps. The plugin also spawns a harmless rabbit with every ambush, for fun.
 TRAP_ANIMALS = ["Cougar", "Grizzly Bear", "Black Bear", "Wolf", "Coyote", "Bobcat", "Boar", "Snake"]
@@ -243,19 +258,28 @@ RANDOM_ANIMAL_TRAP = "Random Animal Ambush Trap"
 GANG_TRAP = "Gang Attack Trap"
 # Drains the Dead Eye meter. (The $666 bounty trap was removed again, see below.)
 DEAD_EYE_DRAIN_TRAP = "Dead Eye Drain Trap"
-# Makes John drunk for a while (the plugin command is "drunk <seconds>"). DRAFT: the plugin side is untested in game.
+# Makes John drunk for 30 seconds (plugin command "drunk <seconds>").
 DRUNK_TRAP = "Drunk Trap"
-# Added later (plugin commands slowmo / stampede / outofbullets / gangattack lawmen). Storm and brawl traps were dropped after testing.
+# Plugin commands slowmo / stampede / outofbullets / gangattack lawmen.
 SLOWMO_TRAP = "Slow Motion Trap"
 STAMPEDE_TRAP = "Stampede Trap"
 OUT_OF_BULLETS_TRAP = "Out of Bullets Trap"
 POSSE_TRAP = "Lawmen Posse Trap"
 # Bounty trap: removed for now (the plugin has "bountytrap" but the game shows no wanted state; waiting for the real crime event).
-# An invisible Herbert Moon follows John for 15 s and talks his ear off (plugin command "herbert").
+# Herbert Moon: removed in Beta 3.0 (see REMOVED_TRAPS).
 HERBERT_TRAP = "Herbert Moon Trap"
-# Beta 2.1: a storm rolls in and three lightning strikes land 5-12 m from John (plugin command "lightning").
+# Three lightning strikes land 5-12 m from John (plugin command "lightning"; the storm was dropped in Beta 3.0).
 LIGHTNING_TRAP = "Lightning Storm Trap"
 EXTRA_TRAPS = [SLOWMO_TRAP, STAMPEDE_TRAP, OUT_OF_BULLETS_TRAP, POSSE_TRAP, HERBERT_TRAP, LIGHTNING_TRAP]   # append only (ids)
+# Beta 3.0: the Herbert Moon trap is out of the pool (his voice lines never played in game). The item keeps its id so older seeds
+# still read, but no new seed places it.
+REMOVED_TRAPS = [HERBERT_TRAP]
+
+# Beta 3.0: a gunman calls John out and the game's own duel starts (plugin command "duel"). Win it and it counts as a duel win;
+# lose it and John dies (DeathLink goes out). Its id comes after the consumables (ids are append-only).
+DUEL_TRAP = "Duel Trap"
+LATE_TRAPS = [DUEL_TRAP]
+ACTIVE_EXTRA_TRAPS = [t for t in EXTRA_TRAPS if t not in REMOVED_TRAPS] + LATE_TRAPS
 
 # Beta 2.1 bounties: completed wanted-poster bounties, counted in the order you finish them ("Bounty 1", "Bounty 2", ...).
 # The game has 20; logic expects the first 8 in New Austin, the next 8 in Nuevo Paraiso and the last 4 in West Elizabeth.
