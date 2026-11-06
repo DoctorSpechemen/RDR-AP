@@ -11,7 +11,7 @@ from .Items import RDRItem, item_name_groups, item_name_to_id, item_table
 from .Locations import RDRLocation, location_name_groups, location_name_to_id, location_table
 from .Options import RDROptions, rdr_option_groups
 
-from worlds.LauncherComponents import Component, Type, components, launch_subprocess
+from worlds.LauncherComponents import Component, Type, components, icon_paths, launch_subprocess
 
 
 def launch_client(*args: str) -> None:
@@ -19,8 +19,9 @@ def launch_client(*args: str) -> None:
     launch_subprocess(launch, name="RDR1Client", args=args)
 
 
+icon_paths["rdr1_icon"] = f"ap:{__name__}/icon.png"   # 48x48: Archipelago logo (MIT) on an original Western frame, no game artwork
 components.append(Component("Red Dead Redemption Client", func=launch_client, component_type=Type.CLIENT,
-                            game_name="Red Dead Redemption", supports_uri=True))
+                            game_name="Red Dead Redemption", supports_uri=True, icon="rdr1_icon"))
 
 
 class RDRWeb(WebWorld):

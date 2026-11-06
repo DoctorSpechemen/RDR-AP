@@ -154,6 +154,8 @@ for name, data in location_table.items():
     rule = ([f"deadeye:{de}"] if de else []) + ([AREA_OPEN[region][0]] if region in AREA_OPEN else [])
     if data.category == "minigame" and data.group in MINIGAME_GATE:
         rule.append(MINIGAME_GATE[data.group])
+    if region == "Anywhere" and data.area in AREA_OPEN and AREA_OPEN[data.area][0] not in rule:
+        rule.append(AREA_OPEN[data.area][0])   # Beta 3.0: Bounty 9-16 need Mexico Open, Bounty 17-20 West Elizabeth Open
     if data.category == "gang_kill" and data.group == "Reyes' Rebels":
         rule.append("we_open")   # the story mission that sets "West Elizabeth Open" is An Appointed Time
     if rule:

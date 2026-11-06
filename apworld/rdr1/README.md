@@ -11,9 +11,13 @@
 
 ## Disclaimer
 > [!IMPORTANT]
-> This project was made with AI assistance: Claude AI wrote about 70% of it. The rest was cleanup and testing by me. AI is
-> close to being very impressive but still overlooks very simple things and issues, so please report anything that looks
-> wrong.
+> This project was made with AI assistance (Claude, by Anthropic):
+> - **Project work overall:** about 75% Claude, 25% me.
+> - **Code:** about 90% Claude (the plugin, APWorld, client and PopTracker pack). The rest, plus the design, all of the
+>   in-game testing and the game knowledge behind the fixes, is mine.
+>
+> AI is close to being very impressive but still overlooks very simple things and issues, so please report anything that
+> looks wrong.
 
 ## What you need
 - Red Dead Redemption (PC, Steam) and [Archipelago](https://github.com/ArchipelagoMW/Archipelago/releases) 0.5.0 or newer.

@@ -11,7 +11,7 @@ connect with your slot name. Items and checks are then tracked automatically.
   "We Shall Be Together in Paradise" is checked, "West Elizabeth Open" with "An Appointed Time" (the Story Progress row;
   click them yourself if you track by hand).
 - Liar's Dice wins need the first Irish mission ("Liar's Dice Open", set by "Liars, Cheats and Other Proud Americans");
-  Arm Wrestling wins need Mexico Open.
+  Arm Wrestling wins need Mexico Open. Bounties 9-16 need Mexico Open, Bounties 17-20 West Elizabeth Open.
 - Checks someone hinted for you are highlighted (needs a PopTracker version with highlight support).
 - **Items:** the four Dead Eye levels, guns (blue), throwables (yellow) and outfits (red).
 
