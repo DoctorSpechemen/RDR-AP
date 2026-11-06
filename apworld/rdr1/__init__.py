@@ -6,7 +6,7 @@ from worlds.AutoWorld import WebWorld, World
 
 from .Data import (ACTIVE_EXTRA_TRAPS, ALL_FILLERS, AREA_GATES, CHAPTER_DEAD_EYE, CLUSTER_NAMES, DEAD_EYE_DRAIN_TRAP, DEAD_EYE_ITEM,
                    DEAD_EYE_LEVELS, DEFAULT_START_WEAPON, DRUNK_TRAP, FILLER_DEFAULT_WEIGHT, FILLER_WEIGHTS, FINAL_CLUSTER, GAME_NAME,
-                   GANG_TRAP, GUNS, OUTFITS, RANDOM_ANIMAL_TRAP, STORY_LOCKED_OUTFITS, WEAPONS)
+                   EARLY_OUTFITS, GANG_TRAP, GUNS, OUTFITS, RANDOM_ANIMAL_TRAP, STORY_LOCKED_OUTFITS, WEAPONS)
 from .Items import RDRItem, item_name_groups, item_name_to_id, item_table
 from .Locations import RDRLocation, location_name_groups, location_name_to_id, location_table
 from .Options import RDROptions, rdr_option_groups
@@ -105,6 +105,9 @@ class RDRWorld(World):
             self.starting_weapon = DEFAULT_START_WEAPON
         elif mode == "random_start":
             self.starting_weapon = self.random.choice(GUNS)
+        if self.options.include_outfits:
+            for outfit in EARLY_OUTFITS:   # the game re-hands these out mid-story; place them early (sphere 1)
+                self.multiworld.early_items[self.player][outfit] = 1
 
     def create_regions(self) -> None:
         multiworld, player = self.multiworld, self.player

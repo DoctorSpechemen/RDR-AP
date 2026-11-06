@@ -188,6 +188,9 @@ MAX_RANDOM_ENCOUNTERS = 20
 
 # Minigames: one check per win, up to MAX_MINIGAME_WINS.
 MINIGAMES = ["Poker", "Blackjack", "Liar's Dice", "Five Finger Fillet", "Horseshoes", "Arm Wrestling", "Duels"]
+# Beta 3.0 (tester): Liar's Dice opens after the first Irish mission (Liars, Cheats and Other Proud Americans) and Arm
+# Wrestling only in Mexico, so their wins sit in that chapter / area in logic. Every other minigame is in New Austin.
+MINIGAME_AREA = {"Liar's Dice": "Irish and Friends", "Arm Wrestling": "Nuevo Paraiso"}
 MAX_MINIGAME_WINS = 5
 
 # Bounties per area.
@@ -229,10 +232,14 @@ OUTFITS = {
 }
 
 # Gentleman's Attire is unlocked from the start on PC (the Social Club / Rockstar Games Launcher bonus), so it is not an item.
-# Beta 3.0: the three law uniforms ARE items again. The pause menu still won't offer them before late in the story (pause.c:
-# unless story mission 57 is passed, it clears their "wearable" bit whenever it opens), so the plugin puts a received uniform
-# on with F10 instead, through the game's own outfit change.
-STORY_LOCKED_OUTFITS = {"Outfit: Gentleman's Attire"}
+# The three law uniforms are not items: they are Jack's outfits. medium_update_thread refuses to put John in them ("John
+# cannot switch to US Marshal, Military, or Bureau outfits"; tested in Beta 3.0, every way of changing outfit failed).
+STORY_LOCKED_OUTFITS = {"Outfit: Gentleman's Attire", "Outfit: U.S. Army Uniform", "Outfit: U.S. Marshal Uniform",
+                        "Outfit: Bureau Uniform"}
+# Beta 3.0: once the story reaches a certain point (around Mexico) medium_update_thread hands the Duster Coat out again, with a
+# pop-up, every time it isn't wearable, so the plugin taking it back makes the pop-up repeat. The Duster is placed early
+# (early_items) so it has normally arrived before then.
+EARLY_OUTFITS = ["Outfit: Duster Coat"]
 
 # Fame / Honor +50 are back (beta 2.1): they use the two ids the old +20 items had, and the plugin gives them again if a
 # checkpoint reload takes them back (the reason they were removed in beta 2).

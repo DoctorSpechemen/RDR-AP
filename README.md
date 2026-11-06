@@ -57,9 +57,8 @@ The setting has been reported to switch itself back on for some players, so chec
     - Cattleman Start, you start with the cattleman and get sent random weapons from items
     - Random Start, you start with a random weapon and get sent random weapons from items
     - Vanilla Pickups, vanilla experience
-- **Outfits are items** (16, cosmetic), including the US Marshal, US Army and Bureau uniforms: the game normally locks those
-  three until late in the story, but once received they can be picked in the pause menu like any other outfit. Gentleman's
-  Attire is not an item (every PC copy already has it).
+- **Outfits are items** (13, cosmetic). Not included: the US Marshal, US Army and Bureau uniforms (the game only lets Jack
+  wear them) and Gentleman's Attire (every PC copy already has it).
 - **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50, and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
   Chewing Tobacco.
 - **Traps** (every trap shows one big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
@@ -79,7 +78,7 @@ The setting has been reported to switch itself back on for some players, so chec
 | Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not. Reyes' Rebels only become enemies after "An Appointed Time" (they are Mexico's law then), so logic expects those kills after it | up to 90 |
 | Gang hideouts | clearing Pike's Basin, Twin Rocks, Fort Mercer, Tumbleweed, Gaptooth Breach, Nosalida, Tesoro Azul | 7 |
 | Hat tricks | shooting a hat off someone without killing them | up to 15 |
-| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels | up to 5 each |
+| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels. Liar's Dice opens after the first Irish mission and Arm Wrestling only in Mexico, so logic expects them from then on | up to 5 each |
 | Bounties | turning in wanted-poster bounties, dead or alive, counted in the order you finish them ("Bounty 1", "Bounty 2", ...) | up to 20 |
 | Fame ranks | reaching Greenhorn, Buckaroo, Mercenary, Gunslinger and Legend | 5 |
 | Honor ranks | reaching Honest Joe, Peacemaker and Hero, or (your choice in the YAML) Rustler, Road Agent and Desperado | 3 |

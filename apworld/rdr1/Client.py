@@ -24,14 +24,13 @@ import Utils
 from CommonClient import CommonContext, ClientCommandProcessor, get_base_parser, gui_enabled, logger, server_loop
 from NetUtils import ClientStatus
 
-from .Data import OUTFITS, STORY_LOCKED_OUTFITS, ANIMAL_TRAPS, CLUSTERS, EXTRA_TRAPS, REMOVED_TRAPS, GAME_NAME, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP, RANDOM_ANIMAL_TRAP
+from .Data import OUTFITS, STORY_LOCKED_OUTFITS, CLUSTERS, GAME_NAME
 from .Locations import location_name_to_id, location_table
 
 DEFAULT_GAME_DIR = r"C:\Program Files (x86)\Steam\steamapps\common\Red Dead Redemption"
 STORY_MISSIONS = [m for _, missions, _, _ in CLUSTERS for m in missions]
 WEAPON_MODES = {0: "vanilla", 1: "cattleman_start", 2: "random_start"}
 POOL_OUTFITS = [n for n in OUTFITS if n not in STORY_LOCKED_OUTFITS]
-OUR_TRAPS = ANIMAL_TRAPS + [RANDOM_ANIMAL_TRAP, GANG_TRAP, DEAD_EYE_DRAIN_TRAP, DRUNK_TRAP] + EXTRA_TRAPS
 
 TALLY_LABELS = [("story", "Story"), ("stranger", "Strangers"), ("hideout", "Hideouts"), ("gang_kill", "Gang Kills"),
                 ("hat_trick", "Hat Tricks"), ("minigame", "Minigames"), ("bounty", "Bounties"), ("rank", "Ranks"), ("shop", "Shops")]
@@ -226,7 +225,7 @@ class RDRContext(CommonContext):
         self.last_items_text = text
 
     def tally_lines(self) -> typing.List[str]:
-        """F9 in game: checks done / total for each category of this seed, all checks, and items received."""
+        """F9 in game: checks done / total for each category of this seed, all checks, Dead Eye level and outfits."""
         done = set(self.checked_locations)
         every = done | set(self.missing_locations)
         lines = []
@@ -236,18 +235,11 @@ class RDRContext(CommonContext):
                 lines.append(f"tally {label}|{sum(1 for i in ids if i in done)}|{len(ids)}")
         if every:
             lines.append(f"tally All checks|{len(done & every)}|{len(every)}")
-        lines.append(f"tally Items received|{len(self.items_received)}|")
         names = [self.item_names.lookup_in_game(item.item) for item in self.items_received]
         lines.append(f"tally Dead Eye|{min(4, names.count('Progressive Dead Eye'))}|4")
         if self.slot_data.get("include_outfits", True):
             outfits = len({n for n in names if n.startswith("Outfit: ")})
             lines.append(f"tally Outfits|{outfits}|{len(POOL_OUTFITS)}")
-        cash = sum(int(n[1:].split(" ")[0]) for n in names if n.startswith("$") and n.endswith(" Cash"))
-        if cash:
-            lines.append(f"tally Cash received|${cash}|")
-        traps = [n for n in names if n in OUR_TRAPS]
-        if traps:
-            lines.append(f"tally Traps survived|{len(traps)}|")
         return lines
 
     async def read_outbox(self) -> None:

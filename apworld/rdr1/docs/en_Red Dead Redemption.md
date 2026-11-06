@@ -28,8 +28,8 @@ Not tracked in this beta: random encounters, challenge ranks, treasure map treas
 
 ## What items can be sent to me?
 
-Dead Eye upgrades, weapons (unless you use vanilla weapon pickups), outfits (including the three law uniforms, which can be
-picked in the pause menu as soon as you receive them), and filler: Max Ammo, Dead Eye Refill, cash
+Dead Eye upgrades, weapons (unless you use vanilla weapon pickups), outfits (13; the law uniforms are not
+included, the game only lets Jack wear them), and filler: Max Ammo, Dead Eye Refill, cash
 ($15 / $35 / $55), Fame +50, Honor +50, and satchel consumables (Snake Oil, Tonic, Medicine, Moonshine, Chewing Tobacco).
 
 Traps: animal ambush, gang attack, lawmen posse, stampede, slow motion, drunk, out of bullets (half your ammo comes back

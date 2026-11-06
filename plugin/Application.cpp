@@ -4475,7 +4475,9 @@ static const std::map<std::string, std::string> OUTFIT_INTERNAL = {
 	{ "Rancher Outfit", "rancher" }, { "Expert Hunter Outfit", "mount" }, { "Savvy Merchant Outfit", "bruise" },
 };
 static const char* POOL_OUTFITS[] = { "gun", "suit", "dnd", "rustler", "treasur", "bandito", "rebel", "legend", "duster", "poncho",
-	"rancher", "mount", "bruise", "uslaw", "military", "fbi" };   // v6.6: the law uniforms are items too
+	"rancher", "mount", "bruise" };   // not the law uniforms (Jack only, see below)
+// v7.0 note: medium_update_thread (Function_68) gives the Duster Coat back, with a pop-up, whenever it isn't wearable and
+// Global_21369.f_244 == 5 (reached around Mexico). The APWorld places the Duster early so it normally arrives before that.
 static const std::set<std::string> SHOP_OUTFITS = { "Shop - Elegant Suit" };   // buying these hands the outfit over
 static std::set<std::string> g_receivedOutfits;   // internal names
 static bool g_outfitListRead = false;              // the client's item list was read at least once this session
@@ -4504,100 +4506,9 @@ static bool OutfitTake(const std::string& _Name)
 	return true;
 }
 
-// v6.6: law uniforms. The pause menu (pause.c Function_307) clears "wearable" on outfits 10, 9 and 12 (Army, Bureau, US
-// Marshal) every time it opens, unless story mission 57 is done, so a received uniform can't be picked there early. The game
-// changes outfits through Global_42826 ("next outfit"): medium_update_thread swaps John into it behind a fade (status bit 8192 =
-// fade back in), with no story check for John. F10 puts on the next received uniform that way (free roam, on foot).
-static void WearUniform()
-{
-	static const char* UNIFORMS[] = { "uslaw", "military", "fbi" };
-	static const char* NAMES[] = { "U.S. Marshal Uniform", "U.S. Army Uniform", "Bureau Uniform" };
-	static int s_next = 0;
-
-	uintptr_t base = GetGlobalPtr();
-
-	if (base == 0) { return; }
-
-	if (!SafeToDeliver() || !ACTOR::IS_PLAYER_CONTROLLABLE(-1)) { ApSay("You can change into a uniform in free roam."); return; }
-
-	int* g = (int*)base;
-
-	for (int tries = 0; tries < 3; tries++)
-	{
-		int k = (s_next + tries) % 3;
-
-		if (!g_receivedOutfits.count(UNIFORMS[k]) && ProgressGet(std::string("outfit:") + UNIFORMS[k]) <= 0) { continue; }
-
-		int n = OutfitIndexByName(UNIFORMS[k], base);
-
-		if (n < 0) { continue; }
-
-		s_next = k + 1;
-
-		int* flags = (int*)(base + (uintptr_t)(42265 + 2 + 18 * n + 2) * 4);
-
-		*flags |= 2 | 4 | 8192;   // discovered, wearable, fade back in after the swap
-		g[42826] = n;             // the game's "next outfit"
-
-		ApBig(NAMES[k], "");
-		Log(std::string("uniform: changing into ") + UNIFORMS[k] + " (entry " + std::to_string(n) + ", current outfit " + std::to_string(g[42825]) + ")");
-		return;
-	}
-
-	ApSay("No law uniforms received yet.");
-}
-
-// v7.0: law uniforms in the pause menu. pause.c runs Function_307 once each time the menu opens: it clears "wearable" (bit 4)
-// on the three uniforms unless story mission 57 is done, then sets each outfit's satchel state (3 = wearable, 2 = seen but
-// locked) and its picture ("john_out_<name>", "_lock" added when not wearable). Picking an outfit (pause event 0x67) only
-// checks bit 4 at that moment. So every frame, for each received uniform whose satchel state is not 3, put bit 2|4 back, set
-// state 3 and the unlocked picture, and tell the menu to refresh: the menu's lock is undone right after it is applied.
-static void UniformMenuTick()
-{
-	static const char* UNIFORMS[] = { "uslaw", "military", "fbi" };
-	static bool s_loggedPause = false;
-
-	if (!g_apMode || !g_outfitItems || !g_outfitListRead) { return; }
-
-	uintptr_t base = GetGlobalPtr();
-
-	if (base == 0) { return; }
-
-	bool paused = CORE::IS_GAME_PAUSED();
-
-	if (paused && !s_loggedPause) { s_loggedPause = true; Log("uniforms: plugin ticks while the game is paused"); }
-
-	bool changed = false;
-
-	for (const char* u : UNIFORMS)
-	{
-		if (!g_receivedOutfits.count(u) && ProgressGet(std::string("outfit:") + u) <= 0) { continue; }
-
-		int n = OutfitIndexByName(u, base);
-
-		if (n < 0) { continue; }
-
-		int* flags = (int*)(base + (uintptr_t)(42265 + 2 + 18 * n + 2) * 4);
-		int h = NameHash(std::string("out_") + u);
-
-		if ((*flags & (2 | 4)) == (2 | 4) && Invoke<0x25EF49AD, int>(h) == 3) { continue; }   // SHOP::SATCHEL_GET_OUTFIT_STATE
-
-		*flags |= 2 | 4;
-		Invoke<0x0A87A573, void>(h, 3);                                                         // SHOP::SATCHEL_SET_OUTFIT_STATE
-		Invoke<0x23EB81F0, void>(h, (std::string("john_out_") + u).c_str());                   // SHOP::SATCHEL_SET_OUTFIT_TEXTURE
-		changed = true;
-	}
-
-	if (changed)
-	{
-		HUD::UI_SEND_EVENT("refresh_outfits");
-
-		static ULONGLONG s_lastLog = 0;
-		ULONGLONG now = GetTickCount64();
-
-		if (now - s_lastLog > 5000) { s_lastLog = now; Log(std::string("uniforms: unlocked in the outfit menu (paused=") + (paused ? "1" : "0") + ")"); }
-	}
-}
+// v7.0: the law uniforms (uslaw, military, fbi) are not items. The base game has no John models for them and its outfit
+// script refuses the swap ("John cannot switch to US Marshal, Military, or Bureau outfits"); only a mod that replaces game
+// files adds both. Tried in Beta 3.0 and dropped: re-unlocking them for the pause menu and swapping through Global_42826.
 
 // owned but not received: take it back (after every load, 1.5 s after a shop purchase, and every 10 s in free roam)
 static void ShopOutfitsCheck()
@@ -6521,40 +6432,44 @@ static void ShowTally()
 {
 	if (g_tallyUntil != 0 && GetTickCount64() < g_tallyUntil) { HideTally(); return; }   // second press closes it
 
-	// v7.0: the help text breaks (stray symbols after the last entry) when it gets long: the v6.4 tally was ~680 characters
-	// with 44 colour tags. Each number is already white, so the separators need no tag of their own (2 tags per entry), and
-	// once the text passes TALLY_MAX_LEN characters or TALLY_MAX_TAGS tags the rest is written without colour.
-	static const size_t TALLY_MAX_LEN = 560;
-	static const int TALLY_MAX_TAGS = 32;
+	// v7.0: the help text breaks (stray symbols after the last entry) once it gets long: ~680 characters / 44 colour tags in
+	// v6.4, still at ~550 / 31. So: no "Archipelago" title and no Items / Cash / Traps lines (tester), separators without a tag
+	// of their own (each number is already white), and past TALLY_MAX_LEN characters or TALLY_MAX_TAGS tags the rest is plain.
+	static const size_t TALLY_MAX_LEN = 420;   // v7.0 test: 517 characters / 29 tags still broke
+	static const int TALLY_MAX_TAGS = 24;
+	static const std::set<std::string> SKIP = { "Items received", "Cash received", "Traps survived" };
 
-	std::vector<std::pair<std::string, std::string>> entries = g_tally;
+	std::vector<std::pair<std::string, std::string>> entries;
+
+	for (const auto& e : g_tally) { if (!SKIP.count(e.first) && e.first != "All checks") { entries.push_back(e); } }
+	for (const auto& e : g_tally) { if (e.first == "All checks") { entries.push_back(e); } }   // v7.0: the total goes last (tester)
 
 	if (entries.empty())
 	{
 		entries.push_back({ "Checks sent", std::to_string(g_sentChecks.size()) });
-		entries.push_back({ "Items received", std::to_string(ProgressGet("ap_index")) });
 		entries.push_back({ "(connect the client for totals)", "" });
 	}
 
-	std::string text = g_tallyColor ? "<0xE8C878>Archipelago" : "Archipelago";   // its separator stays gold
-	int tags = g_tallyColor ? 1 : 0;
+	std::string text;
+	int tags = 0;
 	bool colour = g_tallyColor;
 
 	for (const auto& entry : entries)
 	{
-		std::string plain = " | " + TallyLabel(entry.first) + (entry.second.empty() ? std::string() : " " + entry.second);
+		std::string sep = text.empty() ? std::string() : std::string(" | ");
+		std::string plain = sep + TallyLabel(entry.first) + (entry.second.empty() ? std::string() : " " + entry.second);
 
 		if (colour)
 		{
-			std::string coloured = " | " + TallyEntry(entry.first, entry.second);
-			int need = entry.second.empty() ? 1 : 2;
+			std::string coloured = sep + TallyEntry(entry.first, entry.second);
+			int need = 2;   // label colour + white (for a label with no number, the white tag comes after it)
 
 			if (tags + need <= TALLY_MAX_TAGS && text.size() + coloured.size() <= TALLY_MAX_LEN)
 			{
 				text += coloured;
 				tags += need;
 
-				if (entry.second.empty()) { text += "<0xFFFFFF>"; tags++; }   // back to white after a label with no number
+				if (entry.second.empty()) { text += "<0xFFFFFF>"; }   // back to white after a label with no number
 				continue;
 			}
 
@@ -6748,7 +6663,7 @@ void Application::Initialize(HMODULE _Module)
 			}
 		}
 
-		ApSay(Tag("red", "Red Dead Redemption") + " randomizer beta 2.2 loaded");
+		ApSay(Tag("red", "Red Dead Redemption") + " randomizer Beta 3.0 loaded");
 
 		ULONGLONG nextBeat = 0;
 		ULONGLONG nextPoll = 0;
@@ -6759,7 +6674,7 @@ void Application::Initialize(HMODULE _Module)
 			ULONGLONG nextPerfLog = 0;
 			ULONGLONG nextWeaponWatch = 0;
 			ULONGLONG nextShopWatch = 0;
-		bool f7 = false, statKeyA = false, statKeyB = false, f9 = false, f10 = false;
+		bool f7 = false, statKeyA = false, statKeyB = false, f9 = false;
 
 		while (true)
 		{
@@ -7326,8 +7241,8 @@ void Application::Initialize(HMODULE _Module)
 					else if (command == "verbose 1" || command == "verbose 0") { g_verbose = command == "verbose 1"; Log(std::string("verbose log ") + (g_verbose ? "on" : "off")); }
 					else if (command == "outfitdump") { OutfitDump(); }
 					else if (command.rfind("outfitgive ", 0) == 0) { OutfitGive(command.substr(11)); }
+					else if (command.rfind("apitem ", 0) == 0) { std::string it = Trim(command.substr(7)); Log("apitem: " + it); ApplyApItem(it, "Test"); }   // v7.0 test: treat it as received from Archipelago
 					else if (command.rfind("outfittake ", 0) == 0) { OutfitTake(command.substr(11)); }
-					else if (command == "wearuniform") { WearUniform(); }
 					else if (command == "outfitcheck") { Log("outfitcheck: received " + std::to_string(g_receivedOutfits.size()) + ", option " + (g_outfitItems ? "on" : "off")); ShopOutfitsCheck(); }
 					else if (command == "posse")
 					{
@@ -7637,7 +7552,6 @@ void Application::Initialize(HMODULE _Module)
 
 
 			DeathWatch();
-			UniformMenuTick();   // v7.0: every frame, so the pause menu's uniform lock is undone right away
 
 			if (g_shopRules && now >= nextShopWatch)
 			{
@@ -7686,7 +7600,6 @@ void Application::Initialize(HMODULE _Module)
 				ShowTally();
 			}
 
-			if (KeyEdge(KEY_F10, f10)) { WearUniform(); }   // v6.6: put on a received law uniform
 
 			ScriptWait(0);
 		}

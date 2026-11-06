@@ -149,3 +149,21 @@ class TestRanksOff(RDRTestBase):
     def test_no_rank_locations(self):
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
         self.assertFalse(any(n.startswith(("Fame Rank", "Honor Rank")) for n in names))
+
+
+class TestDusterEarly(RDRTestBase):
+    options = {"include_outfits": True}
+
+    def test_duster_is_early(self):
+        self.assertEqual(self.multiworld.early_items[self.player].get("Outfit: Duster Coat"), 1)
+        self.assertTrue(any(i.name == "Outfit: Duster Coat" for i in self.multiworld.itempool if i.player == self.player))
+
+
+class TestMinigameAreas(RDRTestBase):
+    def test_liars_dice_and_arm_wrestling_gated(self):
+        dice = self.multiworld.get_location("Liar's Dice: Win 1", self.player)
+        arm = self.multiworld.get_location("Arm Wrestling: Win 1", self.player)
+        poker = self.multiworld.get_location("Poker: Win 1", self.player)
+        self.assertEqual(dice.parent_region.name, "Irish and Friends")
+        self.assertEqual(arm.parent_region.name, "Nuevo Paraiso")
+        self.assertEqual(poker.parent_region.name, "New Austin")

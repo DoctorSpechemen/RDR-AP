@@ -101,7 +101,11 @@ for o in OUTFITS:
 # mission is checked; without auto-tracking, click them yourself.
 AREA_OPEN = {"Nuevo Paraiso": ("mexico_open", "Mexico Open", "We Shall Be Together in Paradise", "MX", (196, 120, 60, 255)),
              "West Elizabeth": ("we_open", "West Elizabeth Open", "An Appointed Time", "WE", (70, 120, 70, 255))}
-for c, nm, mission, label, color in AREA_OPEN.values():
+# Beta 3.0: story points that open a minigame (Liar's Dice after the first Irish mission; Arm Wrestling uses Mexico Open).
+STORY_OPEN = {"dice_open": ("Liar's Dice Open", "Liars, Cheats and Other Proud Americans", "LD", (150, 60, 60, 255))}
+MINIGAME_GATE = {"Liar's Dice": "dice_open", "Arm Wrestling": "mexico_open"}
+STORY_TOGGLES = [(c, nm, m, l, col) for c, nm, m, l, col in AREA_OPEN.values()] + [(c,) + v for c, v in STORY_OPEN.items()]
+for c, nm, mission, label, color in STORY_TOGGLES:
     items.append({"name": nm, "type": "toggle", "img": f"images/items/{c}.png", "codes": c})
     icon(os.path.join(OUT, f"images/items/{c}.png"), label, color)
 
@@ -148,6 +152,8 @@ for name, data in location_table.items():
     de = dead_eye_for(data.area)
     section = {"name": name, "item_count": 1}
     rule = ([f"deadeye:{de}"] if de else []) + ([AREA_OPEN[region][0]] if region in AREA_OPEN else [])
+    if data.category == "minigame" and data.group in MINIGAME_GATE:
+        rule.append(MINIGAME_GATE[data.group])
     if data.category == "gang_kill" and data.group == "Reyes' Rebels":
         rule.append("we_open")   # the story mission that sets "West Elizabeth Open" is An Appointed Time
     if rule:
@@ -210,7 +216,7 @@ def grid_of(codes, per_row=6):
 
 grid = {"type": "array", "orientation": "vertical", "margin": "0,0", "content": [
     {"type": "group", "header": "Dead Eye", "content": grid_of([f"deadeye_{lv}" for lv in range(1, 5)], 4)},
-    {"type": "group", "header": "Territories", "content": grid_of([v[0] for v in AREA_OPEN.values()], 4)},
+    {"type": "group", "header": "Story Progress", "content": grid_of([t[0] for t in STORY_TOGGLES], 4)},
     {"type": "group", "header": "Guns", "content": grid_of(guns)},
     {"type": "group", "header": "Throwables", "content": grid_of(throw, 4)},
     {"type": "group", "header": "Outfits", "content": grid_of(grid_outfits)},
@@ -238,7 +244,7 @@ with open(os.path.join(OUT, "scripts/autotracking/item_mapping.lua"), "w") as f:
     f.write("ITEM_MAPPING = " + lua_table(item_mapping) + "\n")
 with open(os.path.join(OUT, "scripts/autotracking/location_mapping.lua"), "w") as f:
     f.write("LOCATION_MAPPING = " + lua_table(location_mapping) + "\n")
-    f.write("AREA_OPEN_BY_LOCATION = {\n" + "".join(f'  [{location_table[m].code}] = "{c}",\n' for c, nm, m, l, col in AREA_OPEN.values()) + "}\n")
+    f.write("AREA_OPEN_BY_LOCATION = {\n" + "".join(f'  [{location_table[m].code}] = "{c}",\n' for c, nm, m, l, col in STORY_TOGGLES) + "}\n")
 
 with open(os.path.join(OUT, "scripts/init.lua"), "w") as f:
     f.write('''Tracker:AddItems("items/items.json")

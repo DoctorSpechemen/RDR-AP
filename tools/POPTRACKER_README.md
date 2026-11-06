@@ -8,8 +8,10 @@ connect with your slot name. Items and checks are then tracked automatically.
 - Checks that are not in your seed are hidden. Grey checks need more Dead Eye in logic (Landon Ricketts' missions and the
   story after them need level 3).
 - Mexico and West Elizabeth checks only show as available once the story opens them: "Mexico Open" lights up when
-  "We Shall Be Together in Paradise" is checked, "West Elizabeth Open" with "An Appointed Time" (the Territories row; click
-  them yourself if you track by hand).
+  "We Shall Be Together in Paradise" is checked, "West Elizabeth Open" with "An Appointed Time" (the Story Progress row;
+  click them yourself if you track by hand).
+- Liar's Dice wins need the first Irish mission ("Liar's Dice Open", set by "Liars, Cheats and Other Proud Americans");
+  Arm Wrestling wins need Mexico Open.
 - Checks someone hinted for you are highlighted (needs a PopTracker version with highlight support).
 - **Items:** the four Dead Eye levels, guns (blue), throwables (yellow) and outfits (red).
 

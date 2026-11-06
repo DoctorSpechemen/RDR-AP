@@ -3,7 +3,7 @@ from typing import Dict, NamedTuple
 from BaseClasses import Location
 
 from .Data import (BASE_ID, BOUNTIES, CHALLENGES, CLUSTERS, GAME_NAME, GANG_FACTIONS, HIDEOUTS, MAX_CHALLENGE_RANKS,
-                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MAX_BOUNTY_CHECKS, MINIGAMES, SHOP_LOCATIONS, LATE_SHOP_LOCATIONS, STRANGERS,
+                   MAX_GANG_KILLS, MAX_HAT_TRICKS, MAX_MINIGAME_WINS, MAX_RANDOM_ENCOUNTERS, MAX_STAT_MILESTONES, OLD_MAX_HAT_TRICKS, MAX_BOUNTY_CHECKS, MINIGAMES, MINIGAME_AREA, SHOP_LOCATIONS, LATE_SHOP_LOCATIONS, STRANGERS,
                    FAME_RANKS, GOOD_HONOR_RANKS, BAD_HONOR_RANKS)
 
 
@@ -45,7 +45,7 @@ def _build() -> Dict[str, LocData]:
         add(f"Hat Trick {i}", "hat_trick", "New Austin", i)
     for game in MINIGAMES:
         for i in range(1, MAX_MINIGAME_WINS + 1):
-            add(f"{game}: Win {i}", "minigame", "New Austin", i, game)
+            add(f"{game}: Win {i}", "minigame", MINIGAME_AREA.get(game, "New Austin"), i, game)
     # Removed in beta 2 (could not be detected reliably): bounties, challenge ranks, random encounters, fame/honor milestones.
     # Their ids stay reserved so the ids after them never move.
     code += sum(BOUNTIES.values()) + len(CHALLENGES) * MAX_CHALLENGE_RANKS + MAX_RANDOM_ENCOUNTERS

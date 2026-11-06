@@ -97,7 +97,7 @@ class IncludeShops(DefaultOnToggle):
 
 class IncludeOutfits(DefaultOnToggle):
     """Outfits are sent to you as items (each one once). Purely cosmetic. Outfits you get any other way (bought in a shop,
-    given by the game) are taken away again. The three law uniforms are put on with F10 in game."""
+    given by the game) are taken away again."""
     display_name = "Include Outfits"
 
 
