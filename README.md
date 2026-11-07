@@ -28,7 +28,7 @@ APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Un
 
 ## Turn off cloud saves (do this once)
 > [!WARNING]
-> Boot game once to generate any files it will need before continuing. 
+> **Boot game once to generate any files it will need before continuing.** 
 > Leaving cloud saves on can put your normal saves back over the Archipelago ones (or the other way around).
 > The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
 > Turn them off:
