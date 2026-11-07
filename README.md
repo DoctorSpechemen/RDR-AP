@@ -2,7 +2,7 @@
 <img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
-**Beta 3.0.** APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
+APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
 > [!CAUTION]
 > This is a beta. The client swaps your save files while you play and backs up your normal saves automatically
@@ -28,6 +28,7 @@
 
 ## Turn off cloud saves (do this once)
 > [!WARNING]
+> Boot game once to generate any files it will need before continuing. 
 > Leaving cloud saves on can put your normal saves back over the Archipelago ones (or the other way around).
 
 The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
