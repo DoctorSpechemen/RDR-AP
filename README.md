@@ -30,13 +30,12 @@ APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Un
 > [!WARNING]
 > Boot game once to generate any files it will need before continuing. 
 > Leaving cloud saves on can put your normal saves back over the Archipelago ones (or the other way around).
-
-The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
-Turn them off:
-1. Start the game and wait for the Rockstar Games Launcher overlay to finish loading.
-2. Press **Home** (on a controller: **Back/View + RB**) to open the overlay.
-3. Click the **gear icon** next to your username (top right), then **Settings > Game Settings**, and turn **Cloud Saves** off.
-4. If the game ever asks whether to turn cloud saves on, choose **Not Right Now**.
+> The Steam version of Red Dead Redemption has no Steam Cloud; its cloud saves go through the **Rockstar Games Launcher**.
+> Turn them off:
+> 1. Start the game and wait for the Rockstar Games Launcher overlay to finish loading.
+> 2. Press **Home** (on a controller: **Back/View + RB**) to open the overlay.
+> 3. Click the **gear icon** next to your username (top right), then **Settings > Game Settings**, and turn **Cloud Saves** off.
+> 4. If the game ever asks whether to turn cloud saves on, choose **Not Right Now**.
 
 The setting has been reported to switch itself back on for some players, so check it again if your saves ever look wrong.
 
