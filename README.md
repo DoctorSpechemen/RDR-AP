@@ -2,7 +2,7 @@
 <img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
-APWorld + RedHook plugin (v7.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
+APWorld + RedHook plugin (v7.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
 > [!CAUTION]
 > This is a beta. The client swaps your save files while you play and backs up your normal saves automatically
@@ -53,6 +53,10 @@ The setting has been reported to switch itself back on for some players, so chec
 
 ## Features
 - **Story missions play in the vanilla order.** Nothing is locked: every story mission you finish sends a check.
+- **Three goals:** John Story (all 57 John missions), Full Story (plus Jack's "Remember My Family"), or **New Austin Only**
+  for a shorter run: finish the story up to the last Irish mission ("We Shall Be Together in Paradise"). With New Austin
+  Only, nothing in Mexico or West Elizabeth (story, strangers, gangs, hideouts, shops, bounties, ranks) is a check, and
+  Seth's first mission is locked until someone finds the **Seth Missions Gate** item (a run takes about 3-4.5 hours).
 - **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first one is sent.
   Landon Ricketts' missions need target painting (level 3): the first one teaches it and can't be finished without it, so
   logic never expects Landon's missions, or the story after them, before level 3, and the game won't let you start his first
@@ -70,7 +74,8 @@ The setting has been reported to switch itself back on for some players, so chec
   (three strikes land close to you, keep moving), Dead Eye drain, and the **duel trap** ("A Challenger Approaches...": a
   gunman calls you out and the game's own duel starts. Win it and it counts as a duel win; lose it and you die, DeathLink
   included). It waits until you are on foot.
-- **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things.
+- **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things. An incoming
+  DeathLink blows John up with an explosion at his feet.
 - A **PopTracker pack** (`RDR-AP_PopTracker.zip`) that tracks your checks and items automatically.
 - **A separate save per multiworld**, and the mod's own progress per multiworld (`rdr1_ap_seeds\<seed>\`).
 
@@ -79,10 +84,10 @@ The setting has been reported to switch itself back on for some players, so chec
 |---|---|---|
 | Story missions | finishing the mission | 57 |
 | Stranger missions | finishing each stranger's whole story (sent when the story ends) | 18 |
-| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not. Reyes' Rebels only become enemies after "An Appointed Time" (they are Mexico's law then), so logic expects those kills after it | up to 90 |
+| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers (the Bollard Twins), Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not. Reyes' Rebels only become enemies after "An Appointed Time" (they are Mexico's law then), so logic expects those kills after it | up to 90 |
 | Gang hideouts | clearing Pike's Basin, Twin Rocks, Fort Mercer, Tumbleweed, Gaptooth Breach, Nosalida, Tesoro Azul | 7 |
 | Hat tricks | shooting a hat off someone without killing them | up to 15 |
-| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels. Liar's Dice opens after the first Irish mission and Arm Wrestling only in Mexico, so logic expects them from then on | up to 5 each |
+| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels. Liar's Dice opens together with Seth's missions and Arm Wrestling only in Mexico, so logic expects them from then on | up to 5 each |
 | Bounties | turning in wanted-poster bounties, dead or alive, counted in the order you finish them ("Bounty 1", "Bounty 2", ...) | up to 20 |
 | Fame ranks | reaching Greenhorn, Buckaroo, Mercenary, Gunslinger and Legend | 5 |
 | Honor ranks | reaching Honest Joe, Peacemaker and Hero, or (your choice in the YAML) Rustler, Road Agent and Desperado | 3 |
@@ -106,7 +111,7 @@ Install [PopTracker](https://github.com/black-sliver/PopTracker/releases) 0.18 o
 `packs` folder, open it and click the **AP** button to connect with your slot name.
 
 ## Known beta issues
-- The rank cut-offs for Gunslinger, Legend, Hero and the bad honor ranks are best guesses from the ranks seen in play; the
+- The rank cut-offs for Gunslinger, Legend, Peacemaker, Hero and the bad honor ranks are best guesses from the ranks seen in play; the
   check may send a little before or after the game's own rank pop-up.
 - Not seen in play yet: West Elizabeth (story, strangers, hideouts, shops) and the full-story goal ("Remember My Family").
 
