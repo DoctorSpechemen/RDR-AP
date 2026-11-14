@@ -2,7 +2,7 @@
 <img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
-APWorld + RedHook plugin (v8.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
+APWorld + RedHook plugin (v8.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
 > [!CAUTION]
 > This is a beta. The client swaps your save files while you play and backs up your normal saves automatically
