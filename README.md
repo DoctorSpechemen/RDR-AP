@@ -2,7 +2,7 @@
 <img width="586" height="322" alt="image" src="https://github.com/user-attachments/assets/ed496406-511e-4a3a-85d8-578699d2ce7b" />
 
 
-APWorld + RedHook plugin (v7.1) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
+APWorld + RedHook plugin (v8.0) + client for Red Dead Redemption 1 on PC. The Undead Nightmare DLC is not part of it for now, this will most likely change in the future.
 
 > [!CAUTION]
 > This is a beta. The client swaps your save files while you play and backs up your normal saves automatically
@@ -41,11 +41,12 @@ The setting has been reported to switch itself back on for some players, so chec
 
 ## How to play
 1. Generate a multiworld with a YAML.
-2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. After you enter your slot name the client
-   can hang for a second or two: that is normal, it is moving your save files into place. `/gamedir <path>` if the game is not in
-   the default Steam folder.
-3. Start the game **after** connecting. The client swaps in this multiworld's own saves.
-4. Play.
+2. Start **Red Dead Redemption Client** from the Archipelago Launcher and connect. The client can hang for a second or two
+   after you enter your slot name while it moves your save files into place.
+3. If the game is not in the default Steam folder, type `/gamedir <path to the game folder>` once.
+4. Start the game **after** connecting, and play.
+
+If the game ever misses a check, type `/sendcheck <name>` in the client. Part of the name is enough (`/sendcheck tempest looms`).
 
 > [!WARNING]
 > When you finish a session, **close the game first, then the client**: your normal saves come back automatically. Close the
@@ -53,27 +54,26 @@ The setting has been reported to switch itself back on for some players, so chec
 
 ## Features
 - **Story missions play in the vanilla order.** Nothing is locked: every story mission you finish sends a check.
-- **Three goals:** John Story (all 57 John missions), Full Story (plus Jack's "Remember My Family"), or **New Austin Only**
-  for a shorter run: finish the story up to the last Irish mission ("We Shall Be Together in Paradise"). With New Austin
-  Only, nothing in Mexico or West Elizabeth (story, strangers, gangs, hideouts, shops, bounties, ranks) is a check, and
-  Seth's first mission is locked until someone finds the **Seth Missions Gate** item (a run takes about 3-4.5 hours).
-- **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the first one is sent.
-  Landon Ricketts' missions need target painting (level 3): the first one teaches it and can't be finished without it, so
-  logic never expects Landon's missions, or the story after them, before level 3, and the game won't let you start his first
-  mission until you have it.
-- **Weapons are items** (Cattleman start, random start or vanilla pickups).
-    - Cattleman Start, you start with the cattleman and get sent random weapons from items
-    - Random Start, you start with a random weapon and get sent random weapons from items
-    - Vanilla Pickups, vanilla experience
+- **Three goals:**
+    - **John Story:** all 57 John missions.
+    - **Full Story:** plus Jack's "Remember My Family".
+    - **New Austin Only:** a shorter run (about 3-4.5 hours) that ends with the raft to Mexico ("We Shall Be Together in
+      Paradise"). Only New Austin has checks, and Seth's first mission is locked until someone finds the
+      **Seth Missions Gate** item.
+- **Progressive Dead Eye** (4 levels: Dead Eye, auto lock-on, target painting, fast recovery). Dead Eye is off until the
+  first one is sent. Landon Ricketts' first mission can't be finished without target painting, so it stays locked until
+  level 3.
+- **Weapons are items.**
+    - **Cattleman Start:** you start with the Cattleman Revolver; every other weapon is sent to you.
+    - **Random Start:** you start with one random weapon; every other weapon is sent to you.
+    - **Vanilla:** find and buy weapons as normal.
 - **Outfits are items** (13, cosmetic). Not included: the US Marshal, US Army and Bureau uniforms (the game only lets Jack
   wear them) and Gentleman's Attire (every PC copy already has it).
-- **Filler:** Max Ammo, Dead Eye Refill, $15 / $35 / $55 cash, Fame +50, Honor +50, and consumables for your satchel: Snake Oil, Tonic, Medicine, Moonshine and
-  Chewing Tobacco.
-- **Traps** (every trap shows one big warning first and fires 3-5 seconds later): animal ambush, gang attack, lawmen posse,
-  stampede, slow motion, drunk, out of bullets (half your ammo comes back after 20 seconds), lightning
-  (three strikes land close to you, keep moving), Dead Eye drain, and the **duel trap** ("A Challenger Approaches...": a
-  gunman calls you out and the game's own duel starts. Win it and it counts as a duel win; lose it and you die, DeathLink
-  included). It waits until you are on foot.
+- **Filler:** Max Ammo, Dead Eye Refill, $35 / $55 / $75 cash, Fame +50, Honor +50, and consumables for your satchel
+  (Snake Oil, Tonic, Medicine, Moonshine, Chewing Tobacco).
+- **Traps:** animal ambush, gang attack, drunk, slow motion, out of bullets (half your ammo comes back after 20 seconds), lightning,
+  Dead Eye drain and the **duel trap** (a gunman calls you out; win and it counts as a duel win, lose and you die).
+  Every trap shows a warning first and fires 3-5 seconds later.
 - **DeathLink** with themed cowboy death messages. Like some high noon references and other fun things. An incoming
   DeathLink blows John up with an explosion at his feet.
 - A **PopTracker pack** (`RDR-AP_PopTracker.zip`) that tracks your checks and items automatically.
@@ -83,15 +83,19 @@ The setting has been reported to switch itself back on for some players, so chec
 | Category | Check | Count |
 |---|---|---|
 | Story missions | finishing the mission | 57 |
-| Stranger missions | finishing each stranger's whole story (sent when the story ends) | 18 |
-| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers (the Bollard Twins), Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not. Reyes' Rebels only become enemies after "An Appointed Time" (they are Mexico's law then), so logic expects those kills after it | up to 90 |
+| Stranger missions | finishing a stranger's whole story | 18 |
+| Gang kills | every 5 kills of a gang, up to 50 (Walton's Gang, Banditos, Reyes' Rebels, Mexican Soldiers, Treasure Hunters, Cattle Rustlers, Indian Raiders, Smugglers, Bounty Hunters). Hideout outlaws count; story mission enemies do not | up to 90 |
 | Gang hideouts | clearing Pike's Basin, Twin Rocks, Fort Mercer, Tumbleweed, Gaptooth Breach, Nosalida, Tesoro Azul | 7 |
 | Hat tricks | shooting a hat off someone without killing them | up to 15 |
-| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels. Liar's Dice opens together with Seth's missions and Arm Wrestling only in Mexico, so logic expects them from then on | up to 5 each |
-| Bounties | turning in wanted-poster bounties, dead or alive, counted in the order you finish them ("Bounty 1", "Bounty 2", ...) | up to 20 |
+| Minigames | wins in poker and blackjack (each hand won), arm wrestling, five finger fillet, horseshoes, liar's dice, duels | up to 5 each |
+| Bounties | turning in wanted-poster bounties, dead or alive | up to 20 |
 | Fame ranks | reaching Greenhorn, Buckaroo, Mercenary, Gunslinger and Legend | 5 |
 | Honor ranks | reaching Honest Joe, Peacemaker and Hero, or (your choice in the YAML) Rustler, Road Agent and Desperado | 3 |
-| Shops | gear, maps, guns and tailor items in every general store, gunsmith and tailor (one check per item, buy it in any store that has it) | 32 |
+| Shops | gear, maps, guns and outfits, once per item in any shop that sells it. A gun you receive from Archipelago sends its shop check too, since the shop won't sell a gun you own | 32 |
+
+When logic expects some checks:
+- **Reyes' Rebels kills:** after "An Appointed Time" (they are allies before it).
+- **Liar's Dice wins:** once Seth's missions open. **Arm Wrestling wins:** once Mexico opens.
 
 ## What is not allowed / not counted
 - Guns and gear you pick up or buy without having received them from Archipelago are taken away after 5 seconds
@@ -104,7 +108,7 @@ The setting has been reported to switch itself back on for some players, so chec
 - Not tracked (yet): random encounters, ambient challenges, treasure map treasure, challenges
 
 ## In-game keys
-- **F9**: Archipelago tally (stays up 30 seconds, press F9 again to close it): Everything you've done with what is required by the Archipelago. 
+- **F9**: Archipelago tally of your checks, by category (stays up 30 seconds; press F9 again to close it).
 
 ## PopTracker
 Install [PopTracker](https://github.com/black-sliver/PopTracker/releases) 0.18 or newer, put `RDR-AP_PopTracker.zip` in its
